@@ -1,0 +1,280 @@
+/* ── Model browser ────────────────────────────────────────────────────────
+ *
+ * The catalogue surface. Shares the overlay shell and the sticky filter block
+ * with the preset picker (picker.css) and only adds what a dense, scannable
+ * list of capabilities needs on top.
+ *
+ * Import after picker.css: `.browse-filters` adjusts `.picker-filters` at the
+ * same single-class specificity, so cascade order decides the winner.
+ */
+
+.browse-filters {
+  gap: var(--space-250);
+}
+
+.browse-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-300);
+}
+
+/* The count on a chip is a number, so it is mono — and dimmer than the label,
+ * because the label is what is being chosen and the count only qualifies it. */
+.browse-chip-count {
+  font-family: var(--font-mono);
+  font-size: var(--text-xxs);
+  color: var(--text-tertiary);
+}
+
+.chip-button[aria-pressed="true"] .browse-chip-count {
+  color: var(--vermilion-300);
+}
+
+.browse-count {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+/* ── Groups ─────────────────────────────────────────────────────────────── */
+
+.browse-group + .browse-group {
+  margin-top: var(--space-600);
+}
+
+.browse-group-label {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-250);
+  margin: 0 0 var(--space-300);
+  font-family: var(--font-display);
+  font-size: var(--text-h-xs);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.browse-group-count {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0;
+  color: var(--text-tertiary);
+}
+
+/* Two-up on a wide window. The overlay is full-bleed, and a single column of
+ * 1400px-wide rows puts the price a whole screen from the title. */
+.browse-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(420px, 100%), 1fr));
+  gap: var(--space-250);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ── Rows ───────────────────────────────────────────────────────────────── */
+
+.browse-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-300);
+  padding: var(--space-300);
+  border: 1px solid transparent;
+  border-radius: var(--radius-300);
+  background: var(--light-05);
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.browse-item:hover {
+  background: var(--light-10);
+}
+
+.browse-item[data-active] {
+  border-color: var(--vermilion-alpha-40);
+  background: var(--accent-soft);
+}
+
+.browse-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-100);
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  text-align: left;
+  cursor: pointer;
+}
+
+.browse-item-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-250);
+  min-width: 0;
+}
+
+.browse-item-title {
+  overflow: hidden;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: var(--tracking-tight);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.browse-item-provider {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-100);
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-xxs);
+  color: var(--text-tertiary);
+}
+
+/* The capability line. Given more weight than the description because it is
+ * the fact the row exists to state: a user who attached a clip is scanning for
+ * "video →", not for prose. */
+.browse-item-io {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-150);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--text-brand);
+}
+
+.browse-item-arrow {
+  color: var(--text-tertiary);
+}
+
+.browse-item-produces {
+  color: var(--text-primary);
+}
+
+.browse-item-desc {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.browse-item-needs {
+  font-size: var(--text-xxs);
+  color: var(--text-tertiary);
+}
+
+/* Why a row is greyed.
+ *
+ * Deliberately not the danger tokens. A model that needs a key, or that has no
+ * input for the attached clip, is not an error and not a destructive action —
+ * red here would spend the one colour the app reserves for those on a routine
+ * state that half the catalogue can be in. It is legible instead by contrast:
+ * every other part of a blocked row fades to 0.45 while this strip stays at
+ * full opacity, so the explanation is the one thing still sharp. */
+.browse-item-reason {
+  margin-top: var(--space-100);
+  padding: var(--space-100) var(--space-250);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-150);
+  background: var(--light-05);
+  color: var(--text-secondary);
+  font-size: var(--text-xxs);
+  font-style: italic;
+}
+
+.browse-item[data-blocked] {
+  background: transparent;
+  border-color: var(--border-subtle);
+}
+
+.browse-item[data-blocked]:hover {
+  background: transparent;
+}
+
+/* Dimmed, not removed: the model is still in the catalogue and the user needs
+ * to see that it exists and what would unlock it. The reason strip keeps full
+ * opacity so the explanation stays readable. */
+.browse-item[data-blocked] .browse-item-head,
+.browse-item[data-blocked] .browse-item-io,
+.browse-item[data-blocked] .browse-item-desc,
+.browse-item[data-blocked] .browse-item-needs,
+.browse-item[data-blocked] .browse-item-price {
+  opacity: 0.45;
+}
+
+.browse-item-main:disabled {
+  cursor: not-allowed;
+}
+
+/* ── Price ──────────────────────────────────────────────────────────────── */
+
+.browse-item-price {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex: none;
+  max-width: 10rem;
+  text-align: right;
+}
+
+.browse-item-price-usd {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* An unpublished price is a routine state — 764 of fal's 1418 models publish
+ * none — so it reads as quiet metadata, not as an error. What it must never
+ * do is read as a number, which is why it drops the mono face. */
+.browse-item-price-usd[data-unknown] {
+  font-family: var(--font-ui);
+  font-size: var(--text-xxs);
+  font-weight: 400;
+  font-style: italic;
+  color: var(--text-tertiary);
+  white-space: normal;
+}
+
+.browse-item-price-unit {
+  font-size: var(--text-xxs);
+  line-height: 1.3;
+  color: var(--text-tertiary);
+}
+
+/* ── Narrow windows ─────────────────────────────────────────────────────── */
+
+/* Below this the price column and the text fight for the same 200px, and the
+ * title starts ellipsing after three characters. */
+@media (max-width: 720px) {
+  .browse-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .browse-item-price {
+    align-items: flex-start;
+    max-width: none;
+    text-align: left;
+  }
+
+  .browse-controls {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-200);
+  }
+}

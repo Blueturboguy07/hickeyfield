@@ -1,0 +1,154 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  # Keys live in the OS keychain, never in CI. Nothing here should ever need a
+  # provider credential — if a test starts wanting one, that test is wrong.
+  RUST_BACKTRACE: 1
+
+jobs:
+  # Fast gates. These fail in under a minute and cover most mistakes, so they
+  # run once rather than per-platform.
+  check:
+    name: Lint and unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Formatting
+        run: cargo fmt --all --check
+
+      # halation-core has no Tauri dependency, so it lints and tests without a
+      # webview toolchain. That is the whole point of the crate split.
+      - name: Clippy (core)
+        run: cargo clippy -p halation-core --all-targets -- -D warnings
+
+      - name: Unit tests (core)
+        run: cargo test -p halation-core
+
+      - name: Provenance
+        run: python3 scripts/lint-provenance.py
+
+      - name: Licence scan
+        run: |
+          cargo install --locked cargo-deny --version ^0.18 || true
+          cargo deny check
+
+      # A convenient prebuilt FFmpeg is the easiest way to accidentally ship an
+      # unredistributable binary: --enable-nonfree makes it unlawful to
+      # distribute at all, and a build without libfreetype has no drawtext, so
+      # burned-in captions silently vanish rather than failing loudly.
+      - name: FFmpeg sidecar licence gate
+        run: ./scripts/fetch-ffmpeg.sh --check
+
+  # The only build that proves anything. A green `cargo build` does not bundle
+  # the frontend, and the failure mode it misses is a blank white window that
+  # appears solely in a real bundle.
+  bundle:
+    name: Bundle (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: ui/pnpm-lock.yaml
+
+      - name: Install UI dependencies
+        working-directory: ui
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck and frontend tests
+        working-directory: ui
+        run: |
+          pnpm exec tsc --noEmit
+          pnpm exec vitest run --passWithNoTests
+
+      - name: Clippy (shell)
+        run: cargo clippy -p halation-tauri --all-targets --target ${{ matrix.target }} -- -D warnings
+
+      - name: Bundle
+        working-directory: ui
+        run: pnpm exec tauri build --target ${{ matrix.target }} --bundles app
+        env:
+          # Unsigned in CI on purpose. With APPLE_SIGNING_IDENTITY unset Tauri
+          # skips signing entirely, which is what we want here — release signing
+          # goes through scripts/build-macos.sh with a Developer ID, and CI has
+          # no notarization credentials.
+          CI: true
+
+      # Catches the crossorigin regression, which is otherwise invisible until
+      # someone launches the bundle and sees a blank window.
+      - name: Assert no crossorigin attribute in built HTML
+        shell: bash
+        run: |
+          if grep -q 'crossorigin' ui/dist/index.html; then
+            echo "::error::built index.html carries a crossorigin attribute."
+            echo "Tauri serves assets over tauri://, which sends no CORS headers,"
+            echo "so the webview will render blank. The stripCrossorigin Vite"
+            echo "plugin must be removing it."
+            exit 1
+          fi
+          echo "clean"
+
+      - name: Assert fonts are embedded, not fetched at runtime
+        shell: bash
+        run: |
+          missing=0
+          for f in bebas-neue inter-var space-grotesk ibm-plex-mono; do
+            ls ui/dist/assets/ | grep -q "$f" || { echo "::error::$f missing from build"; missing=1; }
+          done
+          grep -rq 'fonts.googleapis.com\|fonts.gstatic.com' ui/dist \
+            && { echo "::error::build references a font CDN; fonts must be bundled"; missing=1; }
+          exit $missing
+
+  # macOS-only: the signing guard must actually refuse a development
+  # certificate. A check nobody has watched fail is not a check.
+  signing-guard:
+    name: Signing guard
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Reject a non-Developer-ID identity
+        run: |
+          set +e
+          APPLE_SIGNING_IDENTITY="Apple Development: someone@example.com (XXXXXXXXXX)" \
+            ./scripts/build-macos.sh --skip-notarize >/tmp/out.txt 2>&1
+          code=$?
+          cat /tmp/out.txt
+          if [ "$code" -ne 1 ]; then
+            echo "::error::build-macos.sh accepted a development certificate."
+            exit 1
+          fi
+          echo "correctly refused (exit $code)"

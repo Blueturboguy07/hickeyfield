@@ -1,0 +1,536 @@
+/* ── Shell ────────────────────────────────────────────────────────────────
+ * The webview is the app, not a document: the shell never scrolls, and each
+ * of the three columns owns its own overflow. */
+
+.shell {
+  display: grid;
+  grid-template-rows: 52px minmax(0, 1fr);
+  height: 100%;
+  overflow: hidden;
+}
+
+.titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-400);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-primary);
+  -webkit-app-region: drag;
+}
+
+.wordmark {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  letter-spacing: 0.08em;
+}
+
+.titlebar-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-300);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.titlebar-running {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-150);
+  padding: 2px var(--space-250);
+  border-radius: var(--radius-full);
+  background: var(--accent-soft);
+  color: var(--text-brand);
+  font-family: var(--font-mono);
+}
+
+.titlebar-mode {
+  font-family: var(--font-mono);
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: var(--rail-settings) minmax(0, 1fr) var(--rail-meta);
+  gap: var(--space-300);
+  min-height: 0;
+  padding: var(--space-300);
+  overflow: hidden;
+}
+
+.rail,
+.feed {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* ── Scrollbars ─────────────────────────────────────────────────────────── */
+
+.rail::-webkit-scrollbar,
+.feed::-webkit-scrollbar,
+.overlay-body::-webkit-scrollbar {
+  width: 10px;
+}
+
+.rail::-webkit-scrollbar-thumb,
+.feed::-webkit-scrollbar-thumb,
+.overlay-body::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: var(--radius-full);
+  background-clip: content-box;
+  background-color: var(--light-10);
+}
+
+.rail::-webkit-scrollbar-thumb:hover,
+.feed::-webkit-scrollbar-thumb:hover,
+.overlay-body::-webkit-scrollbar-thumb:hover {
+  background-color: var(--light-20);
+}
+
+/* ── A11y utilities ─────────────────────────────────────────────────────── */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* One focus treatment for everything. Outline rather than box-shadow so it
+ * cannot be knocked out by a component that sets its own elevation. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+/* A visually hidden file input has to hand its ring to the label that stands
+ * in for it, or the control is keyboard-focusable with nothing on screen. */
+.file-input:focus-visible + label {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-grid;
+  grid-auto-flow: column;
+  place-content: center;
+  align-items: center;
+  gap: var(--space-150);
+  min-height: 2.5rem;
+  padding: var(--space-200) var(--space-400);
+  border: 0;
+  border-radius: var(--radius-250);
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.btn:disabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.btn-sm {
+  min-height: 2rem;
+  padding: var(--space-150) var(--space-300);
+  font-size: var(--text-xs);
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-weight: 700;
+  box-shadow: var(--halation-bloom);
+}
+
+.btn-primary:hover {
+  background: var(--accent-hover);
+}
+
+.btn-primary:active {
+  background: var(--accent-active);
+}
+
+.btn-outline {
+  border: 1px solid var(--border-default);
+  background: transparent;
+}
+
+.btn-outline:hover {
+  background: var(--light-05);
+}
+
+.btn-ghost:hover {
+  background: var(--light-05);
+}
+
+.btn-scrim {
+  background: var(--dark-60);
+  backdrop-filter: blur(12px);
+  color: var(--text-primary);
+}
+
+.btn-scrim:hover {
+  background: var(--dark-80);
+}
+
+.btn-icon {
+  min-height: 2rem;
+  padding: var(--space-150);
+}
+
+/* Destructive actions never get a solid fill — the brand is red, and form is
+ * the only thing keeping the two apart. See the danger tokens. */
+.btn-danger {
+  color: var(--danger);
+}
+
+.btn-danger:hover {
+  background: var(--danger-soft);
+}
+
+/* ── Chips ──────────────────────────────────────────────────────────────── */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-150);
+  height: 2rem;
+  padding: 0 var(--space-300);
+  border: 0;
+  border-radius: var(--radius-200);
+  background: var(--light-05);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.chip-icon {
+  display: inline-flex;
+  color: var(--text-secondary);
+}
+
+.chip-button {
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.chip-button:hover {
+  background: var(--light-10);
+}
+
+.chip-button[aria-pressed="true"] {
+  background: var(--accent-soft);
+  color: var(--text-brand);
+  box-shadow: inset 0 0 0 1px var(--vermilion-alpha-30);
+}
+
+.chip-button:disabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.chip-static {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.chip-select {
+  position: relative;
+  padding-right: var(--space-200);
+}
+
+.chip-select-input {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  padding: 0 var(--space-300) 0 0;
+  cursor: pointer;
+}
+
+.chip-select-input option {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.chip-caret {
+  position: absolute;
+  right: var(--space-200);
+  color: var(--text-tertiary);
+  pointer-events: none;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-150);
+  padding: var(--space-100) var(--space-250);
+  border-radius: var(--radius-full);
+  background: var(--light-05);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+.pill-model {
+  background: var(--light-10);
+}
+
+.badge {
+  margin-left: var(--space-200);
+  padding: 1px var(--space-150);
+  border-radius: var(--radius-050);
+  background: var(--accent-soft);
+  color: var(--text-brand);
+  font-family: var(--font-brand);
+  font-size: var(--text-xxs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* ── Toggle ─────────────────────────────────────────────────────────────── */
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-200);
+  height: 2rem;
+  padding: 0 var(--space-250) 0 var(--space-200);
+  border-radius: var(--radius-200);
+  background: var(--light-05);
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle[data-disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.toggle-input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.toggle-track {
+  position: relative;
+  width: 1.75rem;
+  height: 1rem;
+  border-radius: var(--radius-full);
+  background: var(--cool-150);
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: var(--radius-full);
+  background: var(--light-60);
+  transition:
+    transform var(--dur-normal) var(--ease-spring),
+    background-color var(--dur-fast) var(--ease-out);
+}
+
+.toggle-input:checked + .toggle-track {
+  background: var(--accent);
+}
+
+.toggle-input:checked + .toggle-track .toggle-thumb {
+  transform: translateX(0.75rem);
+  background: var(--accent-fg);
+}
+
+.toggle-input:focus-visible + .toggle-track {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+.toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-150);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+/* ── Media ──────────────────────────────────────────────────────────────── */
+
+/* Sits over every thumbnail: a hairline highlight top-left and a shadow
+ * bottom-right, so a dark image never dissolves into a dark surface. */
+.media-bevel {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: var(--card-bevel);
+  pointer-events: none;
+}
+
+/* ── Loaders ────────────────────────────────────────────────────────────── */
+
+.dot-loader {
+  --dot: 0.625rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+}
+
+.dot-loader-sm {
+  --dot: 0.375rem;
+}
+
+.dot-loader-lg {
+  --dot: 0.875rem;
+}
+
+.dot-loader-dots {
+  display: grid;
+  grid-template-columns: repeat(2, var(--dot));
+  grid-auto-rows: var(--dot);
+  gap: var(--space-100);
+  place-content: center;
+}
+
+.dot-loader-dot {
+  width: var(--dot);
+  height: var(--dot);
+  border-radius: var(--radius-full);
+  background-color: currentColor;
+  animation: halation-loader-blink 1.2s linear infinite;
+}
+
+/* 0s / .3s / .9s / .6s — the third dot is .9s, not .6s, so the pulse crosses
+ * the grid diagonally instead of rotating. Swap those two and it reads as a
+ * spinner, which would imply progress we cannot measure. */
+.dot-loader-dot:nth-child(1) {
+  animation-delay: 0s;
+}
+.dot-loader-dot:nth-child(2) {
+  animation-delay: 0.3s;
+}
+.dot-loader-dot:nth-child(3) {
+  animation-delay: 0.9s;
+}
+.dot-loader-dot:nth-child(4) {
+  animation-delay: 0.6s;
+}
+
+@keyframes halation-loader-blink {
+  0%,
+  100% {
+    opacity: 0.18;
+  }
+  45% {
+    opacity: 1;
+  }
+}
+
+.status-line {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-250);
+  padding: var(--space-200) var(--space-300);
+  border-radius: var(--radius-full);
+  background: var(--dark-60);
+  backdrop-filter: blur(12px);
+}
+
+.status-line-text {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-primary);
+}
+
+/* The rainbow + grain placeholder. Four fixed hues, deliberately outside our
+ * palette: it must read as "no frame exists yet", not as our artwork. */
+.rainbow-placeholder {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-300);
+  background-image: linear-gradient(-45deg, #00d6fd, #f779c8, #77fe49, #fbf33a);
+  background-size: 400% 400%;
+  animation: halation-rainbow-drift 5s ease infinite;
+}
+
+/* Multiply only. The source recipe also lowers backdrop contrast, which on our
+ * darker canvas flattens the four hues into grey and costs the placeholder the
+ * one thing it is for: being unmistakably a placeholder. */
+.rainbow-placeholder-grain {
+  position: absolute;
+  inset: 0;
+  mix-blend-mode: multiply;
+  opacity: 0.85;
+  background-repeat: repeat;
+  background-size: 400px;
+  pointer-events: none;
+}
+
+@keyframes halation-rainbow-drift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* ── Empty states ───────────────────────────────────────────────────────── */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-300);
+  padding: var(--space-1200) var(--space-600);
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-600);
+  text-align: center;
+}
+
+.empty-state-heading {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-h-sm);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+
+.empty-state-explanation {
+  max-width: 42ch;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.empty-state-error .empty-state-heading {
+  color: var(--danger);
+}

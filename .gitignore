@@ -1,0 +1,40 @@
+# Rust
+/target
+**/*.rs.bk
+
+# Tauri generated
+/src-tauri/gen/schemas
+
+# Node
+node_modules
+/ui/dist
+/ui/.vite
+
+# Bundled sidecars — fetched by scripts/fetch-ffmpeg.sh, never committed.
+# These are large, per-platform, and their provenance must be reproducible
+# from the fetch script rather than from a binary in git history.
+/src-tauri/binaries/*
+!/src-tauri/binaries/.gitkeep
+!/src-tauri/binaries/README.md
+
+# Secrets — never commit. Provider keys live in the OS keychain, never in files.
+.env
+.env.*
+*.p12
+*.pfx
+*.cer
+*.p8
+*.pem
+# ...except Apple's Developer ID intermediates, which MUST be checked in: a bare
+# .p12 carries only the leaf cert, and without the chain, signing is silently
+# skipped and the failure looks like a wrong password.
+!build-resources/apple-developer-id-intermediates.pem
+
+# Build output
+/build-out
+*.dmg
+
+# OS
+.DS_Store
+Thumbs.db
+.gstack/

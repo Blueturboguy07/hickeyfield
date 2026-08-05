@@ -1,0 +1,69 @@
+Halation
+Copyright (c) 2026 Halation contributors
+Licensed under the GNU Affero General Public License v3.0 or later.
+See LICENSE for the full text.
+
+Halation is an independent open-source project. It is not affiliated with,
+endorsed by, or sponsored by Higgsfield, Inc.
+
+--------------------------------------------------------------------------------
+Bundled third-party components
+--------------------------------------------------------------------------------
+
+Fonts — SIL Open Font License 1.1 (see LICENSES/OFL-1.1.txt)
+
+  Bebas Neue      Copyright (c) 2010 Dharma Type
+                  https://github.com/dharmatype/Bebas-Neue
+  Inter           Copyright (c) 2016 The Inter Project Authors
+                  https://github.com/rsms/inter
+  Space Grotesk   Copyright (c) 2020 Florian Karsten
+                  https://github.com/floriankarsten/space-grotesk
+  IBM Plex Mono   Copyright (c) 2017 IBM Corp.
+                  https://github.com/IBM/plex
+
+Model catalogue seed — MIT
+
+  higgsfield-ai/cli MODELS.md
+  Copyright (c) Higgsfield, Inc.
+  https://github.com/higgsfield-ai/cli
+  Used as a machine-readable specification of model parameters and constraints.
+  See LICENSES/MIT-higgsfield-cli.txt.
+
+FFmpeg — GNU General Public License
+
+  Bundled as a per-platform static sidecar (src-tauri/binaries/ffmpeg-<triple>),
+  fetched and checksum-pinned by scripts/fetch-ffmpeg.sh. Neither build is
+  configured with --enable-nonfree, which would make it unredistributable.
+
+  Note the two platforms ship under DIFFERENT versions of the GPL, so both
+  licence texts are included:
+
+  macOS (aarch64-apple-darwin) — FFmpeg 8.1, GPL-2.0-or-later
+    See LICENSES/GPL-2.0.txt
+    --enable-gpl --enable-libx264 --enable-libx265 --enable-libvpx
+    --enable-libaom --enable-libsvtav1 --enable-libvvenc --enable-libkvazaar
+    --enable-libopus --enable-libmp3lame --enable-libvorbis --enable-libtheora
+    --enable-libopenjpeg --enable-libwebp --enable-libass --enable-libfreetype
+    --enable-fontconfig --enable-libharfbuzz --enable-libvmaf --enable-libzimg
+    --enable-libvidstab --enable-libsnappy --enable-neon
+    --enable-runtime-cpudetect --pkg-config-flags=--static
+
+  Windows (x86_64-pc-windows-msvc) — FFmpeg n8.1, GPL-3.0-or-later
+    See LICENSES/GPL-3.0.txt
+    --enable-gpl --enable-version3 --disable-libfdk-aac --enable-libx264
+    --enable-libfreetype --enable-libharfbuzz --enable-libfribidi
+    --enable-fontconfig --enable-ffnvcodec --enable-libvpl --enable-amf
+
+  libfreetype is not optional: without it FFmpeg has no drawtext filter and
+  burned-in captions silently do not render. Homebrew's own build lacks it,
+  which is why the fetch script gates on its presence.
+
+  WRITTEN OFFER: the complete corresponding source for these FFmpeg builds is
+  available from https://ffmpeg.org/download.html at the tagged version above,
+  and on request from the address in the repository README.
+
+  ⚖️ PRE-LAUNCH: the macOS build is currently sourced from osxexperts.net,
+  which labels its downloads "for educational purposes only". That wording is
+  incompatible with redistribution and must be resolved — by building FFmpeg
+  ourselves or sourcing from a vendor with clear redistribution terms — before
+  any public release.

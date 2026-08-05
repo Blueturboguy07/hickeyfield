@@ -1,0 +1,16 @@
+# ui/ is a single package, not a multi-package workspace — but pnpm refuses to
+# run at all if this file exists without a `packages` field. Omitting it is what
+# silently broke WhimprFlow's v0.1.0 build: `pnpm --dir ui build` failed, which
+# meant Tauri's `beforeBuildCommand` was bypassed entirely and a stale frontend
+# got bundled.
+packages:
+  - .
+
+# esbuild ships a postinstall that fetches its platform binary. pnpm blocks
+# postinstall scripts by default, so without this the binary is never fetched
+# and `vite build` dies on a missing dependency.
+#
+# NB: this key is `allowBuilds` in pnpm 11+. It was `onlyBuiltDependencies` (a
+# list) in pnpm 10 — if you see that name in an older project, it is not a typo.
+allowBuilds:
+  esbuild: true

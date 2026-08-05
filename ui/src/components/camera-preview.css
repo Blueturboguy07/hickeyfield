@@ -1,0 +1,361 @@
+/* Camera-move previews.
+ *
+ * Each keyframe set is the geometry of one real camera move. They run only
+ * while the card is hovered or focused, and they hold their end state rather
+ * than snapping back — a move that rubber-banded would read as a loop rather
+ * than as a direction.
+ *
+ * The plate is oversized and the frame clips it, so a pan or tilt reveals
+ * image rather than the background. Without the overscan every lateral move
+ * would slide a hard edge into view. */
+
+.cam-frame {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  /* Establishes the 3D context the orbit and dolly-zoom moves need. */
+  perspective: 900px;
+}
+
+.cam-plate {
+  position: absolute;
+  /* 15% overscan on every edge. */
+  inset: -15%;
+  width: 130%;
+  height: 130%;
+  object-fit: cover;
+  will-change: transform, filter;
+  transform-origin: 50% 50%;
+  /* The resting state is a small inset so a push has somewhere to go. */
+  transform: scale(1.02);
+  transition:
+    transform 320ms var(--ease-out),
+    filter 320ms var(--ease-out);
+}
+
+/* Animations are gated on the card's hover/focus state rather than :hover on
+ * the image, so keyboard focus drives them identically. */
+.cam-frame[data-active="true"] .cam-plate {
+  animation-duration: 2.4s;
+  animation-timing-function: cubic-bezier(0.33, 0, 0.2, 1);
+  animation-fill-mode: forwards;
+  animation-iteration-count: 1;
+}
+
+/* ── Dolly / zoom ────────────────────────────────────────────────────────── */
+
+@keyframes cam-push-in {
+  to {
+    transform: scale(1.28);
+  }
+}
+@keyframes cam-push-out {
+  from {
+    transform: scale(1.28);
+  }
+  to {
+    transform: scale(1.02);
+  }
+}
+.cam-frame[data-active="true"] .cam-push-in {
+  animation-name: cam-push-in;
+}
+.cam-frame[data-active="true"] .cam-push-out {
+  animation-name: cam-push-out;
+}
+
+/* A zoom is optically flatter than a dolly — no parallax — so it gets a
+ * slightly smaller throw and no perspective change. */
+@keyframes cam-zoom-in {
+  to {
+    transform: scale(1.2);
+  }
+}
+@keyframes cam-zoom-out {
+  from {
+    transform: scale(1.2);
+  }
+  to {
+    transform: scale(1.02);
+  }
+}
+.cam-frame[data-active="true"] .cam-zoom-in {
+  animation-name: cam-zoom-in;
+}
+.cam-frame[data-active="true"] .cam-zoom-out {
+  animation-name: cam-zoom-out;
+}
+
+/* ── Pan / tilt ──────────────────────────────────────────────────────────── */
+
+@keyframes cam-pan-right {
+  to {
+    transform: scale(1.06) translateX(-9%);
+  }
+}
+@keyframes cam-pan-left {
+  to {
+    transform: scale(1.06) translateX(9%);
+  }
+}
+@keyframes cam-tilt-up {
+  to {
+    transform: scale(1.06) translateY(9%);
+  }
+}
+@keyframes cam-tilt-down {
+  to {
+    transform: scale(1.06) translateY(-9%);
+  }
+}
+.cam-frame[data-active="true"] .cam-pan-right {
+  animation-name: cam-pan-right;
+}
+.cam-frame[data-active="true"] .cam-pan-left {
+  animation-name: cam-pan-left;
+}
+.cam-frame[data-active="true"] .cam-tilt-up {
+  animation-name: cam-tilt-up;
+}
+.cam-frame[data-active="true"] .cam-tilt-down {
+  animation-name: cam-tilt-down;
+}
+
+/* ── Crane / aerial ──────────────────────────────────────────────────────── */
+
+/* A crane rises *and* gains distance, which a pure tilt does not. */
+@keyframes cam-crane-up {
+  to {
+    transform: scale(1.12) translateY(11%);
+  }
+}
+@keyframes cam-crane-down {
+  from {
+    transform: scale(1.12) translateY(11%);
+  }
+  to {
+    transform: scale(1.02) translateY(0);
+  }
+}
+@keyframes cam-aerial-pullback {
+  from {
+    transform: scale(1.35);
+  }
+  to {
+    transform: scale(1) translateY(-6%);
+  }
+}
+.cam-frame[data-active="true"] .cam-crane-up {
+  animation-name: cam-crane-up;
+}
+.cam-frame[data-active="true"] .cam-crane-down {
+  animation-name: cam-crane-down;
+}
+.cam-frame[data-active="true"] .cam-aerial-pullback {
+  animation-name: cam-aerial-pullback;
+  animation-duration: 3s;
+}
+
+/* ── Lateral travel ──────────────────────────────────────────────────────── */
+
+/* Tracking holds a constant rate — the giveaway that it is motorised rather
+ * than a pan from a fixed point. */
+@keyframes cam-tracking {
+  to {
+    transform: scale(1.08) translateX(-12%);
+  }
+}
+.cam-frame[data-active="true"] .cam-tracking {
+  animation-name: cam-tracking;
+  animation-timing-function: linear;
+}
+
+/* ── Orbit ───────────────────────────────────────────────────────────────── */
+
+@keyframes cam-orbit {
+  to {
+    transform: scale(1.14) rotateY(-16deg) translateX(-5%);
+  }
+}
+@keyframes cam-orbit-full {
+  25% {
+    transform: scale(1.14) rotateY(-14deg);
+  }
+  50% {
+    transform: scale(1.14) rotateY(0deg);
+  }
+  75% {
+    transform: scale(1.14) rotateY(14deg);
+  }
+  to {
+    transform: scale(1.14) rotateY(0deg);
+  }
+}
+.cam-frame[data-active="true"] .cam-orbit {
+  animation-name: cam-orbit;
+}
+.cam-frame[data-active="true"] .cam-orbit-full {
+  animation-name: cam-orbit-full;
+  animation-duration: 3.6s;
+  animation-iteration-count: infinite;
+  animation-timing-function: linear;
+}
+
+@keyframes cam-arc-left {
+  to {
+    transform: scale(1.12) rotateY(13deg) translateX(6%);
+  }
+}
+@keyframes cam-arc-right {
+  to {
+    transform: scale(1.12) rotateY(-13deg) translateX(-6%);
+  }
+}
+.cam-frame[data-active="true"] .cam-arc-left {
+  animation-name: cam-arc-left;
+}
+.cam-frame[data-active="true"] .cam-arc-right {
+  animation-name: cam-arc-right;
+}
+
+/* ── Character moves ─────────────────────────────────────────────────────── */
+
+/* Bullet time: the camera travels while the scene is frozen, so the arc is
+ * fast and then holds dead still. */
+@keyframes cam-bullet-time {
+  0% {
+    transform: scale(1.1) rotateY(-18deg);
+  }
+  45% {
+    transform: scale(1.1) rotateY(18deg);
+  }
+  100% {
+    transform: scale(1.1) rotateY(18deg);
+  }
+}
+.cam-frame[data-active="true"] .cam-bullet-time {
+  animation-name: cam-bullet-time;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Handheld is defined by never settling. Small, irregular, unresolved. */
+@keyframes cam-handheld {
+  0% {
+    transform: scale(1.08) translate(0, 0) rotate(0deg);
+  }
+  20% {
+    transform: scale(1.08) translate(-1.1%, 0.7%) rotate(-0.35deg);
+  }
+  40% {
+    transform: scale(1.08) translate(0.9%, -0.5%) rotate(0.3deg);
+  }
+  60% {
+    transform: scale(1.08) translate(-0.6%, -0.9%) rotate(-0.2deg);
+  }
+  80% {
+    transform: scale(1.08) translate(1%, 0.6%) rotate(0.28deg);
+  }
+  100% {
+    transform: scale(1.08) translate(0, 0) rotate(0deg);
+  }
+}
+.cam-frame[data-active="true"] .cam-handheld {
+  animation-name: cam-handheld;
+  animation-duration: 2.8s;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+}
+
+/* Walking is a push with a vertical bob at step cadence. */
+@keyframes cam-pov-walk {
+  0% {
+    transform: scale(1.04) translateY(0);
+  }
+  25% {
+    transform: scale(1.1) translateY(-0.9%);
+  }
+  50% {
+    transform: scale(1.16) translateY(0.7%);
+  }
+  75% {
+    transform: scale(1.22) translateY(-0.9%);
+  }
+  100% {
+    transform: scale(1.28) translateY(0);
+  }
+}
+.cam-frame[data-active="true"] .cam-pov-walk {
+  animation-name: cam-pov-walk;
+  animation-duration: 2.8s;
+}
+
+/* Rack focus is the one move with no geometry at all — only the focal plane
+ * changes, so it is expressed purely as blur. */
+@keyframes cam-rack-focus {
+  0% {
+    filter: blur(0px);
+  }
+  45% {
+    filter: blur(5px);
+  }
+  100% {
+    filter: blur(0px);
+  }
+}
+.cam-frame[data-active="true"] .cam-rack-focus {
+  animation-name: cam-rack-focus;
+  animation-duration: 2.2s;
+}
+
+/* The vertigo shot: distance and focal length move in opposite directions, so
+ * the subject holds its size while the background stretches. Perspective is
+ * what sells it — scale alone reads as an ordinary push. */
+@keyframes cam-dolly-zoom {
+  to {
+    transform: scale(1.24) perspective(220px) translateZ(18px);
+  }
+}
+@keyframes cam-dolly-zoom-in {
+  from {
+    transform: scale(1.24) perspective(220px) translateZ(18px);
+  }
+  to {
+    transform: scale(1.02) perspective(900px) translateZ(0);
+  }
+}
+.cam-frame[data-active="true"] .cam-dolly-zoom {
+  animation-name: cam-dolly-zoom;
+  animation-duration: 3s;
+}
+.cam-frame[data-active="true"] .cam-dolly-zoom-in {
+  animation-name: cam-dolly-zoom-in;
+  animation-duration: 3s;
+}
+
+/* Locked off. No animation rule, on purpose — see CameraPreview.tsx. */
+.cam-static {
+  transform: scale(1.02);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cam-frame[data-active="true"] .cam-plate {
+    animation: none;
+  }
+  /* Still show the *end* of the move, so the preset remains legible to
+   * someone who has asked for no motion. */
+  .cam-frame[data-active="true"] .cam-push-in,
+  .cam-frame[data-active="true"] .cam-zoom-in,
+  .cam-frame[data-active="true"] .cam-pov-walk {
+    transform: scale(1.28);
+  }
+  .cam-frame[data-active="true"] .cam-pan-right {
+    transform: scale(1.06) translateX(-9%);
+  }
+  .cam-frame[data-active="true"] .cam-pan-left {
+    transform: scale(1.06) translateX(9%);
+  }
+  .cam-frame[data-active="true"] .cam-rack-focus {
+    filter: blur(4px);
+  }
+}

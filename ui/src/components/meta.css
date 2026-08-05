@@ -1,0 +1,290 @@
+/* ── Meta rail ─────────────────────────────────────────────────────────── */
+
+.rail-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-300);
+  padding-right: var(--space-100);
+}
+
+.spend-meter {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-250);
+  padding: var(--space-300) var(--space-400);
+  border-radius: var(--radius-300);
+  background: var(--bg-glass);
+  backdrop-filter: blur(40px);
+}
+
+.spend-meter-label {
+  font-size: var(--text-xxs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.spend-meter-value {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+/* Unpriced jobs are counted separately rather than folded in as zero — a
+ * spend total that quietly under-reports is worse than no total. */
+.spend-meter-note {
+  font-family: var(--font-mono);
+  font-size: var(--text-xxs);
+  color: var(--warning);
+}
+
+.meta-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-300);
+}
+
+.meta-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-300);
+  padding: var(--space-400);
+  border: 1px solid transparent;
+  border-radius: var(--radius-400);
+  background: var(--bg-secondary);
+  transition: border-color var(--dur-normal) var(--ease-out);
+}
+
+.meta-card[data-selected] {
+  border-color: var(--vermilion-alpha-40);
+}
+
+.meta-card-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-250);
+}
+
+.meta-card-status {
+  font-size: var(--text-xxs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.meta-card-status[data-tone="running"] {
+  color: var(--text-brand);
+}
+
+.meta-card-status[data-tone="error"] {
+  color: var(--danger);
+}
+
+.meta-card-status[data-tone="done"] {
+  color: var(--success);
+}
+
+.meta-card-time {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-xxs);
+  color: var(--text-tertiary);
+}
+
+.meta-card-prompt {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.meta-card-enhanced {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.meta-card-enhanced summary {
+  cursor: pointer;
+  color: var(--text-brand);
+  list-style: none;
+}
+
+.meta-card-enhanced summary::-webkit-details-marker {
+  display: none;
+}
+
+.meta-card-enhanced summary::before {
+  content: "▸ ";
+}
+
+.meta-card-enhanced[open] summary::before {
+  content: "▾ ";
+}
+
+.meta-card-enhanced p {
+  margin: var(--space-200) 0 0;
+  line-height: 1.5;
+}
+
+.meta-card-refs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-200);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.meta-card-refs img {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-200);
+  object-fit: cover;
+}
+
+/* Filename fallback for an input the webview cannot load — see rail.css. */
+.meta-card-ref-name {
+  display: inline-block;
+  max-width: 120px;
+  overflow: hidden;
+  padding: 0 var(--space-200);
+  border-radius: var(--radius-200);
+  background: var(--light-05);
+  font-size: var(--text-xs);
+  line-height: 36px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--text-secondary);
+}
+
+.meta-card-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-150);
+}
+
+.meta-card-fields {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-150) var(--space-300);
+  margin: 0;
+  padding: var(--space-300) 0 0;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.meta-card-fields > div {
+  display: contents;
+}
+
+.meta-card-fields dt {
+  font-size: var(--text-xxs);
+  color: var(--text-tertiary);
+}
+
+.meta-card-fields dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xxs);
+  color: var(--text-secondary);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.meta-card-fields dd[data-unknown] {
+  color: var(--warning);
+}
+
+.meta-card-fields dd[data-pending] {
+  color: var(--text-tertiary);
+}
+
+.meta-card-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-200);
+  padding-top: var(--space-300);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.meta-card-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-100);
+  margin-left: auto;
+}
+
+.meta-card-copied {
+  min-width: 3.5rem;
+  font-size: var(--text-xxs);
+  color: var(--text-brand);
+  text-align: right;
+}
+
+/* ── Delete confirmation ──────────────────────────────────────────────────
+ * A modal rather than a coloured button: our accent is red, so hue cannot
+ * carry destructive weight the way it does in a product with a blue brand.
+ * Per the brand rules the destructive control is never a solid fill. */
+
+.confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-400);
+  padding: var(--space-500);
+  max-width: 30rem;
+}
+
+.confirm-body {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.confirm-check {
+  display: flex;
+  gap: var(--space-250);
+  align-items: flex-start;
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+.confirm-check input {
+  margin-top: 0.2em;
+  accent-color: var(--color-vermilion);
+  flex: none;
+}
+
+/* The irreversible half, said out loud rather than implied by an icon. */
+.confirm-warn {
+  color: var(--danger);
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-250);
+}
+
+/* Advisories: the model ran, but could not honour something you set.
+ * Amber rather than the danger red — nothing failed, and colouring it as a
+ * failure would be as misleading as staying silent. */
+.meta-card-advisories {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-150);
+  margin: 0;
+  padding: var(--space-250) var(--space-300);
+  border-left: 2px solid var(--warning);
+  border-radius: var(--radius-200);
+  background: var(--light-05);
+  list-style: none;
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  color: var(--text-secondary);
+}

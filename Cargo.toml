@@ -1,0 +1,39 @@
+[workspace]
+resolver = "2"
+members = ["crates/halation-core", "src-tauri"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/Blueturboguy07/halation"
+
+[workspace.dependencies]
+anyhow = "1"
+thiserror = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync", "process"] }
+# rustls, not native-tls: no OpenSSL, no Windows build headache.
+# `rustls-native-certs` reads the OS trust store, so corporate TLS interception
+# still works — bundled webpki roots alone would break those users.
+# `system-proxy` respects OS proxy settings, which a desktop app must.
+# NB: reqwest 0.13 renamed the `rustls-tls` feature to `rustls`.
+reqwest = { version = "0.13", default-features = false, features = [
+    "json",
+    "blocking",
+    "rustls",
+    "rustls-native-certs",
+    "stream",
+    "multipart",
+    "charset",
+    "http2",
+    "system-proxy",
+] }
+tracing = "0.1"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<!--
+  Deliberately empty.
+
+  A Tauri app under the hardened runtime is a Rust binary plus a system webview,
+  and the web content runs in Apple's own out-of-process service — so it needs
+  none of the JIT / unsigned-memory / library-validation exceptions that an
+  Electron app or a process linking its own ML runtime does. Verified
+  empirically on Publik's Iris: the hardened-runtime build launches and runs
+  fine with an empty plist.
+
+  Do not add entitlements speculatively. Every one you add is something Apple
+  scrutinises at notarization and something the verify script has to assert
+  survived the build.
+-->
+<dict/>
+</plist>

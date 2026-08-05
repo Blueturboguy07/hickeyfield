@@ -1,0 +1,206 @@
+/* ── Results feed ────────────────────────────────────────────────────────
+ * The centre column caps at 1030px and centres, so a wide window grows the
+ * margins rather than stretching a 16:9 card past a comfortable reading size. */
+
+.feed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-500);
+  padding: var(--space-200) var(--space-400) var(--space-1200);
+}
+
+.feed-header,
+.feed-list,
+.feed > .empty-state {
+  width: 100%;
+  max-width: 1030px;
+  margin: 0 auto;
+}
+
+.feed-header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-300);
+}
+
+/* A refused generation. Per the brand rules destructive/error state is never a
+ * solid fill — text and border on a tinted surface — so it cannot be mistaken
+ * for the vermilion brand accent, which is the only solid-filled colour. */
+.feed-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-300);
+  padding: var(--space-300) var(--space-400);
+  border: 1px solid rgba(255, 84, 98, 0.32);
+  border-radius: var(--radius-300);
+  background: rgba(255, 84, 98, 0.12);
+  color: var(--danger);
+}
+
+.feed-error-text {
+  flex: 1;
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  /* Provider errors can be long and unbroken; without this they force the
+   * whole column to scroll sideways. */
+  overflow-wrap: anywhere;
+}
+
+.feed-error-dismiss {
+  flex: none;
+  color: var(--danger);
+}
+
+.feed-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-h-xs);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+.feed-sub {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+
+.feed-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-500);
+}
+
+.result-card {
+  position: relative;
+  border-radius: var(--radius-500);
+  overflow: hidden;
+  transition: box-shadow var(--dur-normal) var(--ease-out);
+}
+
+.result-card[data-selected] {
+  box-shadow: 0 0 0 1.5px var(--vermilion-alpha-50);
+}
+
+.result-card-surface {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: var(--bg-secondary);
+  cursor: pointer;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* The running-generation backdrop: the input frame, blown past the edges and
+ * blurred, then dimmed. It gives the card the colour of the scene being made
+ * instead of a grey rectangle. */
+.result-card-surface[data-blurred]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: var(--bg-image);
+  background-size: cover;
+  background-position: 50%;
+  filter: blur(24px);
+  transform: scale(1.2);
+  transform-origin: 50%;
+}
+
+.result-card-surface[data-blurred]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: #0f1113d9;
+  pointer-events: none;
+}
+
+.result-card-media {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Portrait media centred in the wide panel, at its own ratio, never cropped. */
+.result-card-media[data-letterboxed] {
+  width: auto;
+  max-width: 100%;
+  margin: 0 auto;
+  object-fit: contain;
+}
+
+.result-card-running {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.result-card-rainbow {
+  height: 82%;
+  max-width: 92%;
+  aspect-ratio: 16 / 9;
+}
+
+.result-card-status {
+  position: absolute;
+  bottom: var(--space-400);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.result-card-failed {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-200);
+  padding: var(--space-600);
+  background: var(--danger-soft);
+  color: var(--danger);
+  text-align: center;
+}
+
+.result-card-failed-title {
+  font-family: var(--font-display);
+  font-size: var(--text-h-xs);
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.result-card-failed-body {
+  max-width: 46ch;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.result-card-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+.result-card-cancel {
+  position: absolute;
+  top: var(--space-300);
+  right: var(--space-300);
+  z-index: 3;
+  min-height: 2rem;
+  padding: var(--space-150) var(--space-300);
+  font-size: var(--text-xs);
+}

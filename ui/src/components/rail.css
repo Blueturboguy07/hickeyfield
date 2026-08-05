@@ -1,0 +1,537 @@
+/* ── Settings rail ───────────────────────────────────────────────────────
+ * One card, 24px radius, 16px between every child. The rail is a fixed 410px
+ * so the controls never reflow while the feed resizes around them. */
+
+.rail-settings {
+  padding-right: var(--space-100);
+}
+
+.rail-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-400);
+  padding: var(--space-400);
+  border-radius: var(--radius-600);
+  background: var(--bg-secondary);
+  box-shadow: var(--shadow-raised);
+}
+
+.rail-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-400);
+}
+
+.rail-disclaimer {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: var(--text-xxs);
+  line-height: 1.4;
+}
+
+/* ── Tabs ───────────────────────────────────────────────────────────────── */
+
+.tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-050);
+  padding: var(--space-100);
+  border-radius: var(--radius-300);
+  background: var(--light-05);
+}
+
+.tabs-tab {
+  flex: 1;
+  padding: var(--space-200) var(--space-300);
+  border: 0;
+  border-radius: var(--radius-200);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-normal) var(--ease-out),
+    color var(--dur-normal) var(--ease-out);
+}
+
+.tabs-tab:hover {
+  color: var(--text-primary);
+}
+
+.tabs-tab[aria-selected="true"] {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.tabs-inline {
+  flex-wrap: wrap;
+  background: transparent;
+  padding: 0;
+  gap: var(--space-200);
+}
+
+.tabs-inline .tabs-tab {
+  flex: 0 0 auto;
+  border-radius: var(--radius-full);
+  background: var(--light-05);
+}
+
+.tabs-inline .tabs-tab[aria-selected="true"] {
+  background: var(--bg-inverse);
+  color: var(--text-inverse);
+}
+
+/* ── Preset tile ────────────────────────────────────────────────────────── */
+
+.preset-tile {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-400);
+  overflow: hidden;
+  background: var(--bg-tertiary);
+}
+
+.preset-tile-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.preset-tile-change {
+  position: absolute;
+  top: var(--space-250);
+  right: var(--space-250);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-150);
+  height: 1.75rem;
+  padding: 0 var(--space-300);
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--dark-60);
+  backdrop-filter: blur(12px);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.preset-tile-change:hover {
+  background: var(--dark-80);
+}
+
+.preset-tile-caption {
+  position: absolute;
+  left: var(--space-400);
+  bottom: var(--space-300);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-left: var(--space-100);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.55);
+}
+
+/* Space Grotesk 700 at -4%, not Bebas. Bebas has one weight and reads too
+ * light at this size, and it has no lowercase for the subline to match. */
+.preset-tile-name {
+  font-family: var(--font-brand);
+  font-size: var(--text-md);
+  font-weight: 700;
+  letter-spacing: var(--tracking-caps);
+  line-height: 1.2;
+  color: var(--text-brand);
+}
+
+.preset-tile-sub {
+  font-size: var(--text-xs);
+  color: var(--light-70);
+}
+
+/* ── Frame slots ────────────────────────────────────────────────────────── */
+
+.frame-slots {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-200);
+}
+
+.frame-slot {
+  position: relative;
+}
+
+.frame-slot-target {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-200);
+  aspect-ratio: 1;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-300);
+  background: var(--light-05);
+  color: var(--text-secondary);
+  cursor: pointer;
+  overflow: hidden;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+
+.frame-slot-target:hover {
+  border-color: var(--border-strong);
+  background: var(--light-10);
+}
+
+.frame-slot-icon {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-full);
+  background: var(--light-10);
+}
+
+.frame-slot-label {
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+.frame-slot-thumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Shown when a file was picked through the native dialog: we hold a real path,
+ * which the webview cannot load without the asset protocol. Naming the file is
+ * honest; a broken <img> would read as a failed attachment. */
+.frame-slot-name,
+.ref-strip-name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  padding: 0 var(--space-200);
+  font-size: var(--text-xs);
+  line-height: 1.3;
+  text-align: center;
+  overflow-wrap: anywhere;
+  color: var(--text-secondary);
+}
+
+.ref-strip-name {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  -webkit-line-clamp: 3;
+}
+
+.frame-slot-target:has(.frame-slot-thumb) .frame-slot-label {
+  position: absolute;
+  bottom: var(--space-200);
+  padding: 2px var(--space-200);
+  border-radius: var(--radius-full);
+  background: var(--dark-60);
+  color: var(--text-primary);
+}
+
+.frame-slot-clear {
+  position: absolute;
+  top: var(--space-200);
+  right: var(--space-200);
+}
+
+/* ── Dropzone ───────────────────────────────────────────────────────────── */
+
+.dropzone-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-250);
+}
+
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-150);
+  padding: var(--space-500) var(--space-400);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-300);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: center;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+
+.dropzone:hover,
+.dropzone[data-dragging] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.dropzone-title {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.dropzone-hint {
+  font-family: var(--font-mono);
+  font-size: var(--text-xxs);
+  color: var(--text-tertiary);
+}
+
+.ref-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-200);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ref-strip-item {
+  position: relative;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--radius-200);
+  overflow: hidden;
+}
+
+.ref-strip-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ref-strip-clear {
+  position: absolute;
+  inset: 0;
+  min-height: 0;
+  width: 100%;
+  border-radius: 0;
+  opacity: 0;
+}
+
+.ref-strip-item:hover .ref-strip-clear,
+.ref-strip-clear:focus-visible {
+  opacity: 1;
+}
+
+/* ── Prompt card ────────────────────────────────────────────────────────── */
+
+.prompt-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-250);
+  padding: var(--space-300);
+  border-radius: var(--radius-400);
+  background: var(--light-05);
+}
+
+.prompt-card[data-disabled] {
+  opacity: 0.7;
+}
+
+.prompt-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.prompt-card-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.prompt-card-count {
+  font-family: var(--font-mono);
+  font-size: var(--text-xxs);
+  color: var(--text-tertiary);
+}
+
+.prompt-card-input {
+  width: 100%;
+  min-height: 5.5rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  resize: vertical;
+  outline: none;
+}
+
+.prompt-card-input::placeholder {
+  color: var(--text-secondary);
+}
+
+.prompt-card-input:focus-visible {
+  outline: none;
+}
+
+.prompt-card:focus-within {
+  box-shadow: inset 0 0 0 1.5px var(--border-focus);
+}
+
+.prompt-card-note {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: var(--text-xxs);
+}
+
+.prompt-card-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-200);
+}
+
+/* ── Model row ──────────────────────────────────────────────────────────── */
+
+.model-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-300);
+  width: 100%;
+  padding: var(--space-300);
+  border: 0;
+  border-radius: var(--radius-300);
+  background: var(--light-05);
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.model-row:hover {
+  background: var(--light-10);
+}
+
+.model-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.model-row-label {
+  font-size: var(--text-xxs);
+  color: var(--text-tertiary);
+}
+
+.model-row-name {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.model-row-route {
+  font-family: var(--font-mono);
+  font-size: var(--text-xxs);
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Chip row + Generate ────────────────────────────────────────────────── */
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-200);
+}
+
+.generate {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-200);
+}
+
+.generate-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-250);
+  width: 100%;
+  height: 52px;
+  border: 0;
+  border-radius: var(--radius-300);
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-family: var(--font-ui);
+  font-size: var(--text-md);
+  font-weight: 700;
+  letter-spacing: var(--tracking-tight);
+  cursor: pointer;
+  /* The product is named after the bloom around a bright highlight. This is
+   * the one surface that earns it. */
+  box-shadow: var(--halation-bloom);
+  transition:
+    background-color var(--dur-normal) var(--ease-out),
+    box-shadow var(--dur-normal) var(--ease-out);
+}
+
+.generate-button:hover:not(:disabled) {
+  background: var(--accent-hover);
+  box-shadow: 0 0 32px rgba(255, 74, 28, 0.42);
+}
+
+.generate-button:active:not(:disabled) {
+  background: var(--accent-active);
+}
+
+.generate-button:disabled {
+  background: var(--cool-200);
+  color: var(--text-tertiary);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.generate-spark {
+  opacity: 0.65;
+}
+
+.generate-cost {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+/* An unknown price is stated in words at a size that fits the button; it is
+ * never rounded to a number we cannot stand behind. */
+.generate-cost[data-unknown] {
+  font-size: var(--text-xs);
+  opacity: 0.75;
+}
+
+.generate-note {
+  margin: 0;
+  min-height: 1rem;
+  color: var(--text-tertiary);
+  font-size: var(--text-xxs);
+  text-align: center;
+}
+
+/* An unfilled required slot. Accent rather than danger: nothing is wrong yet,
+ * this is the thing still to do. */
+.frame-slot-required {
+  color: var(--text-brand);
+  font-weight: 700;
+}

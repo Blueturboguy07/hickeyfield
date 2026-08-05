@@ -1,0 +1,44 @@
+/*
+ * Self-hosted fonts. All four are SIL Open Font License 1.1 — see
+ * LICENSES/OFL-1.1.txt for the licence text and NOTICE for attribution.
+ *
+ * These are bundled rather than fetched. A desktop app has no network
+ * guarantee, and a webfont request on first paint would mean a visible
+ * fallback flash every cold start. Latin subset only.
+ */
+
+/* Bebas Neue — display only. One weight, no lowercase by design. */
+@font-face {
+  font-family: "Bebas Neue";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("./bebas-neue-400.woff2") format("woff2");
+}
+
+/* Inter — the UI face. Variable, 100..900. */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./inter-var.woff2") format("woff2-variations");
+}
+
+/* Space Grotesk — brand/caps. Variable, 300..700. */
+@font-face {
+  font-family: "Space Grotesk";
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url("./space-grotesk-var.woff2") format("woff2-variations");
+}
+
+/* IBM Plex Mono — costs, seeds, ids. */
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./ibm-plex-mono-400.woff2") format("woff2");
+}

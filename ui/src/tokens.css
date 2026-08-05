@@ -1,0 +1,262 @@
+@import "./fonts/fonts.css";
+
+/*
+ * Halation design tokens.
+ *
+ * Structure and neutral values follow Higgsfield's shipped token sheet, which
+ * is functional UI convention. The brand accent is deliberately ours: their
+ * lime #d1fe17 is the single most identifying element of their interface and
+ * reusing it — alongside a similar layout — is where reimplementation would
+ * turn into passing off.
+ *
+ * Dark only. Their light and dark themes emit byte-identical values; there is
+ * no light mode to build.
+ */
+
+:root {
+  color-scheme: dark only;
+
+  /* ── Brand: vermilion ──────────────────────────────────────────────────
+   * Named for halation — the reddish bloom around bright highlights on film.
+   *
+   * 500 is the one red bright enough to preserve the dark-text-on-bright-accent
+   * contrast model (~6.2:1 against --accent-fg). Do not darken it without
+   * re-checking that ratio; a darker red forces white text and inverts every
+   * derived token.
+   */
+  --vermilion-100: #fff3ef;
+  --vermilion-200: #ffe0d6;
+  --vermilion-300: #ffc0ac;
+  --vermilion-400: #ff8a63;
+  --vermilion-500: #ff4a1c;
+  --vermilion-600: #e03a0f;
+  --vermilion-700: #b32d0b;
+  --vermilion-800: #872108;
+  --vermilion-900: #611705;
+  --vermilion-1000: #400e03;
+  --vermilion-1100: #260802;
+  --vermilion-1200: #140401;
+
+  --vermilion-alpha-05: #ff4a1c0d;
+  --vermilion-alpha-10: #ff4a1c1a;
+  --vermilion-alpha-15: #ff4a1c26;
+  --vermilion-alpha-20: #ff4a1c33;
+  --vermilion-alpha-30: #ff4a1c4d;
+  --vermilion-alpha-40: #ff4a1c66;
+  --vermilion-alpha-50: #ff4a1c80;
+  --vermilion-alpha-60: #ff4a1c99;
+  --vermilion-alpha-70: #ff4a1cb2;
+  --vermilion-alpha-80: #ff4a1ccc;
+  --vermilion-alpha-90: #ff4a1ce5;
+  --vermilion-alpha-100: #ff4a1c;
+
+  /* ── Neutral surfaces (cool, blue-tinted) ───────────────────────────── */
+  --cool-050: #5c626a;
+  --cool-100: #484e56;
+  --cool-150: #383e46;
+  --cool-200: #2a2d32;
+  --cool-250: #23262a;
+  --cool-300: #1c1e21;
+  --cool-350: #18191c;
+  --cool-400: #131416;
+
+  /* ── Transparency ladders ───────────────────────────────────────────── */
+  --light-05: #ffffff0d;
+  --light-10: #ffffff1a;
+  --light-15: #ffffff26;
+  --light-20: #ffffff33;
+  --light-30: #ffffff4d;
+  --light-40: #ffffff66;
+  --light-50: #ffffff80;
+  --light-60: #ffffff99;
+  --light-70: #ffffffb2;
+  --light-80: #ffffffcc;
+  --light-90: #ffffffe5;
+  --dark-20: #00000033;
+  --dark-40: #00000066;
+  --dark-50: #00000080;
+  --dark-60: #00000099;
+  --dark-80: #000000cc;
+
+  /* ── Semantic: background ───────────────────────────────────────────── */
+  --bg-primary: var(--cool-400);
+  --bg-secondary: var(--cool-300);
+  --bg-secondary-strong: var(--cool-250);
+  --bg-tertiary: var(--cool-200);
+  --bg-glass: #23262abf;
+  --bg-inverse: #ffffff;
+
+  /* ── Semantic: text ─────────────────────────────────────────────────── */
+  --text-primary: #ffffff;
+  --text-secondary: #828282;
+  --text-tertiary: #626262;
+  --text-disabled: var(--cool-100);
+  --text-inverse: #1a1a1a;
+
+  /* Accent as TEXT uses 400, not 500. #ff4a1c on --bg-primary is ~4.3:1,
+   * which is marginal for small text; #ff8a63 clears AA comfortably.
+   * Accent as a FILL uses 500. Two tokens, one hue — do not collapse them. */
+  --text-brand: var(--vermilion-400);
+  --text-link: var(--vermilion-400);
+
+  /* ── Semantic: accent fills ─────────────────────────────────────────── */
+  --accent: var(--vermilion-500);
+  --accent-fg: #14151a;
+  --accent-hover: var(--vermilion-400);
+  --accent-active: var(--vermilion-600);
+  --accent-soft: var(--vermilion-alpha-10);
+  --border-focus: var(--vermilion-500);
+
+  /* ── Semantic: danger ───────────────────────────────────────────────────
+   * A red brand next to red error states is a real collision, and hue alone
+   * cannot carry it (brand ~14deg, danger ~355deg). We disambiguate by FORM:
+   * only the brand ever gets a solid fill. Destructive actions render as text
+   * + icon + border on a tinted surface, and always require a confirm modal.
+   * There is deliberately no --danger-fill token.
+   */
+  --danger: #ff5462;
+  --danger-soft: #ff54621f;
+  --danger-border: #ff54624d;
+
+  --success: #2eb844;
+  --warning: #dfab01;
+  --info: #5b91fe;
+
+  /* ── Borders ────────────────────────────────────────────────────────── */
+  --border-subtle: var(--light-05);
+  --border-default: var(--light-10);
+  --border-strong: var(--light-20);
+
+  /* ── Spacing ────────────────────────────────────────────────────────── */
+  --space-050: 0.125rem;
+  --space-100: 0.25rem;
+  --space-150: 0.375rem;
+  --space-200: 0.5rem;
+  --space-250: 0.625rem;
+  --space-300: 0.75rem;
+  --space-400: 1rem;
+  --space-500: 1.25rem;
+  --space-600: 1.5rem;
+  --space-700: 1.75rem;
+  --space-800: 2rem;
+  --space-1000: 2.5rem;
+  --space-1200: 3rem;
+  --space-1600: 4rem;
+  --space-2000: 5rem;
+  --space-2400: 6rem;
+
+  /* ── Radii ──────────────────────────────────────────────────────────── */
+  --radius-050: 0.125rem;
+  --radius-100: 0.25rem;
+  --radius-150: 0.375rem;
+  --radius-200: 0.5rem;
+  --radius-250: 0.625rem;
+  --radius-300: 0.75rem;
+  --radius-400: 1rem;
+  --radius-500: 1.25rem;
+  --radius-600: 1.5rem;
+  --radius-full: 9999px;
+
+  /* ── Elevation ──────────────────────────────────────────────────────── */
+  --shadow-sheen: inset 0 2px 3px 0 #ffffff0d;
+  --shadow-raised: inset 0 2px 3px 0 #ffffff0d, 0 4px 24px -8px #00000026;
+  --shadow-modal: inset 0 2px 3px 0 #ffffff0d, 0 2px 4px -0.5px #00000026;
+  --shadow-overlay: inset 0 2px 3px 0 #ffffff0d, 0 4px 20px -8px #00000026;
+
+  /* On every media thumbnail, as an absolutely-positioned overlay element. */
+  --card-bevel: -0.5px -0.5px 1px 0 rgba(255, 255, 255, 0.12) inset,
+    0.8px 0.5px 0.5px 0 rgba(27, 27, 27, 0.17) inset;
+
+  /* The signature: the product is named after a glow, so accent surfaces
+   * actually bloom. This is our one deliberate divergence from Higgsfield's
+   * flat treatment. */
+  --halation-bloom: 0 0 24px rgba(255, 74, 28, 0.32);
+
+  /* ── Motion ─────────────────────────────────────────────────────────── */
+  --dur-fast: 0.1s;
+  --dur-normal: 0.2s;
+  --dur-slow: 0.3s;
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ── Type ───────────────────────────────────────────────────────────────
+   * Bebas Neue is display-only: hero headlines and job-stage headings. It has
+   * no lowercase and exactly one weight, so every use must be uppercase and
+   * must not rely on font-weight. Preset card titles are NOT a Bebas slot —
+   * they are Space Grotesk 700 at -4% tracking, which is the signature look.
+   */
+  --font-display: "Bebas Neue", "Arial Narrow", sans-serif;
+  --font-brand: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-ui: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --text-xxs: 0.625rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-h-xs: 1.5rem;
+  --text-h-sm: 1.75rem;
+  --text-h-md: 2.5rem;
+  --text-h-lg: 3rem;
+  --text-h-xl: 4rem;
+
+  --tracking-caps: -0.04em;
+  --tracking-tight: -0.02em;
+
+  /* ── Layout ─────────────────────────────────────────────────────────── */
+  --rail-settings: 410px;
+  --rail-meta: 390px;
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-overlay: 30;
+  --z-modal: 40;
+  --z-popover: 50;
+  --z-toast: 60;
+  --z-tooltip: 70;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--text-md);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  /* Desktop chrome: the webview is the app, not a document. */
+  overflow: hidden;
+  user-select: none;
+  cursor: default;
+}
+
+input,
+textarea,
+[contenteditable] {
+  user-select: text;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

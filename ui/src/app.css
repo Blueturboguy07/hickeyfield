@@ -1,0 +1,15 @@
+/*
+ * Import order is the cascade order, and it is load-bearing.
+ *
+ * base.css defines the shared primitives (.btn, .chip, .toggle) at single-class
+ * specificity; every component sheet then adjusts those same primitives at the
+ * same specificity. Base has to come first or a component override silently
+ * loses to the generic rule — which is exactly how a 32px chip ends up 40px.
+ */
+@import "./base.css";
+@import "./components/rail.css";
+@import "./components/feed.css";
+@import "./components/meta.css";
+@import "./components/picker.css";
+@import "./components/setup.css";
+@import "./components/camera-preview.css";

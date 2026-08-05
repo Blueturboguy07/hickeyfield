@@ -1,0 +1,342 @@
+/* ── Overlays ───────────────────────────────────────────────────────────── */
+
+.overlay-root {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: grid;
+  place-items: center;
+}
+
+.overlay-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: var(--dark-60);
+  backdrop-filter: blur(8px);
+  cursor: default;
+}
+
+.overlay-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-300);
+  padding: var(--space-400);
+  border-radius: var(--radius-600);
+  background: var(--bg-glass);
+  backdrop-filter: blur(40px);
+  box-shadow: var(--shadow-modal);
+  outline: none;
+  overflow: clip;
+}
+
+.overlay-root[data-variant="full"] .overlay-panel {
+  width: calc(100vw - 3rem);
+  height: calc(100dvh - 3rem);
+}
+
+.overlay-root[data-variant="sheet"] .overlay-panel {
+  width: min(520px, calc(100vw - 3rem));
+  max-height: calc(100dvh - 6rem);
+}
+
+.overlay-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-300);
+  flex: none;
+}
+
+.overlay-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-h-xs);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+.overlay-close {
+  margin-left: auto;
+}
+
+.overlay-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-250);
+  flex: 1 1 auto;
+  max-width: 420px;
+  height: 2.5rem;
+  padding: 0 var(--space-400);
+  border-radius: var(--radius-full);
+  background: var(--light-05);
+  color: var(--text-secondary);
+}
+
+.overlay-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  outline: none;
+}
+
+.overlay-search:focus-within {
+  box-shadow: inset 0 0 0 1.5px var(--border-focus);
+}
+
+.overlay-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-500);
+  flex: 1 1 auto;
+  min-height: 0;
+  padding-right: var(--space-200);
+  overflow-y: auto;
+}
+
+/* ── Preset picker ──────────────────────────────────────────────────────── */
+
+.picker-filters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-300);
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  padding-bottom: var(--space-200);
+  background: linear-gradient(
+    to bottom,
+    var(--bg-secondary-strong) 70%,
+    transparent
+  );
+}
+
+.chip-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-200);
+}
+
+/* 9:16 cards, four to six across depending on width. Portrait because that is
+ * the shape most of these presets are actually used at. */
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: var(--space-300);
+}
+
+.preset-card {
+  position: relative;
+  display: block;
+  aspect-ratio: 9 / 16;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-400);
+  background: var(--bg-tertiary);
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform var(--dur-normal) var(--ease-out-expo);
+}
+
+.preset-card:hover {
+  transform: translateY(-2px);
+}
+
+.preset-card-media {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.preset-card-caption {
+  position: absolute;
+  left: var(--space-300);
+  right: var(--space-300);
+  bottom: var(--space-300);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.6);
+}
+
+/* Space Grotesk 700 at -4%. Not Bebas — see the note on the preset tile. */
+.preset-card-name {
+  font-family: var(--font-brand);
+  font-size: var(--text-md);
+  font-weight: 700;
+  letter-spacing: var(--tracking-caps);
+  line-height: 1.15;
+  color: var(--text-primary);
+}
+
+.preset-card-category {
+  font-size: var(--text-xxs);
+  color: var(--light-60);
+}
+
+.picker-more {
+  display: flex;
+  justify-content: center;
+  padding-bottom: var(--space-600);
+}
+
+/* ── Model picker ───────────────────────────────────────────────────────── */
+
+.model-group + .model-group {
+  margin-top: var(--space-500);
+}
+
+.model-group-label {
+  margin: 0 0 var(--space-250);
+  font-size: var(--text-xxs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.model-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-200);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.model-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-300);
+  padding: var(--space-250) var(--space-300);
+  border: 1px solid transparent;
+  border-radius: var(--radius-300);
+  background: var(--light-05);
+}
+
+.model-item[data-active] {
+  border-color: var(--vermilion-alpha-40);
+  background: var(--accent-soft);
+}
+
+.model-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.model-item-name {
+  display: flex;
+  align-items: center;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.model-item-sub {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.model-item-routes {
+  display: flex;
+  gap: var(--space-150);
+  flex: none;
+}
+
+.chip-route {
+  height: 1.75rem;
+  padding: 0 var(--space-250);
+  font-family: var(--font-mono);
+  font-size: var(--text-xxs);
+}
+
+/* A route we cannot execute is shown rather than hidden, so the user can see
+ * the model is served there and learn what unlocks it. Dimmed, not removed —
+ * and never a red fill, which is reserved for destructive state. */
+.chip-route[data-unavailable] {
+  opacity: 0.4;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+.model-item[data-unrunnable] .model-item-name {
+  opacity: 0.55;
+}
+
+.model-item[data-unrunnable] .model-item-sub {
+  /* The reason replaces the description here, so it needs to read as an
+   * explanation rather than as more metadata. */
+  font-style: italic;
+}
+
+/* ── Follow-up questions ──────────────────────────────────────────────────
+ * Asked between Generate and submit. Sized to be read in one glance: past
+ * three questions this stops being help and becomes an interrogation. */
+
+.followups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-500);
+  padding: var(--space-500);
+  max-width: 34rem;
+}
+
+.followups-intro {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.followup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-200);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.followup-q {
+  padding: 0;
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* The cost of skipping. Without it a question is pure friction. */
+.followup-why {
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  color: var(--text-tertiary);
+}
+
+.followup-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-200);
+  margin-top: var(--space-100);
+}
+
+.followups-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-300);
+  padding-top: var(--space-300);
+  border-top: 1px solid var(--border-subtle);
+}
