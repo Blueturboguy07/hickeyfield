@@ -44,12 +44,12 @@ jobs:
           cargo install --locked cargo-deny --version ^0.18 || true
           cargo deny check
 
-      # A convenient prebuilt FFmpeg is the easiest way to accidentally ship an
-      # unredistributable binary: --enable-nonfree makes it unlawful to
-      # distribute at all, and a build without libfreetype has no drawtext, so
-      # burned-in captions silently vanish rather than failing loudly.
-      - name: FFmpeg sidecar licence gate
-        run: ./scripts/fetch-ffmpeg.sh --check
+      # The FFmpeg licence gate lives in the bundle jobs, not here. It reads a
+      # binary that this runner would have to download purely to inspect —
+      # there is no Linux target in the shipping set, so `--check` with no
+      # argument asked for `x86_64-unknown-linux-gnu` and failed every run.
+      # The bundle jobs need the sidecar on disk regardless, so gating there
+      # checks exactly what is about to be bundled and downloads it once.
 
   # The only build that proves anything. A green `cargo build` does not bundle
   # the frontend, and the failure mode it misses is a blank white window that
@@ -84,6 +84,26 @@ jobs:
           node-version: 24
           cache: pnpm
           cache-dependency-path: ui/pnpm-lock.yaml
+
+      # `externalBin` is resolved by Tauri's build script, so a missing sidecar
+      # is not a bundling warning — it fails the compile with `resource path
+      # binaries/ffmpeg-… doesn't exist`. It is gitignored on purpose: an
+      # 80 MB per-platform blob in git history is unauditable, and its
+      # provenance should be reproducible from a URL and a checksum instead.
+      - name: Fetch the FFmpeg sidecar
+        shell: bash
+        run: ./scripts/fetch-ffmpeg.sh --target ${{ matrix.target }}
+
+      # A convenient prebuilt FFmpeg is the easiest way to ship an
+      # unredistributable binary: --enable-nonfree makes distribution unlawful,
+      # and a build without libfreetype has no drawtext, so burned-in captions
+      # vanish silently rather than failing loudly. Both are invisible in normal
+      # use — such a build encodes, decodes and passes every functional test —
+      # so the only way to notice is to ask the binary what it was configured
+      # with, which is what this does.
+      - name: FFmpeg sidecar licence gate
+        shell: bash
+        run: ./scripts/fetch-ffmpeg.sh --check --target ${{ matrix.target }}
 
       - name: Install UI dependencies
         working-directory: ui

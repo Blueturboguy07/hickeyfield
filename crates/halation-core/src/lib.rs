@@ -4,6 +4,7 @@
 //! cost estimation. This crate deliberately has no Tauri dependency so it stays
 //! unit-testable without linking a webview.
 
+pub mod aspect;
 pub mod camera;
 pub mod capability;
 pub mod catalog;
@@ -17,7 +18,6 @@ pub mod enhancer;
 pub mod fal_catalogue;
 pub mod fal_schema;
 pub mod ffmpeg;
-pub mod gaps;
 pub mod job;
 pub mod media;
 pub mod onboarding;

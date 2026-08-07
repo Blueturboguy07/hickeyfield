@@ -2,6 +2,7 @@ mod app;
 mod commands;
 mod harness;
 mod library;
+mod pricing;
 mod runner;
 mod store;
 mod validate;
@@ -25,6 +26,16 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let state = AppState::init(app.handle()).map_err(std::io::Error::other)?;
+
+            // On the CSP in tauri.conf.json, which cannot carry a comment of
+            // its own: `img-src`/`media-src` include `https:` because there is
+            // a real window between a job completing and its file finishing
+            // downloading, and the provider's own URL is the only thing that
+            // exists during it. Without that, the window renders as a broken
+            // card in a release build while working perfectly in dev — the dev
+            // server sends no CSP at all — which is the worst kind of split.
+            // Nothing else is widened: `script-src` and `connect-src` stay on
+            // 'self', so this buys a visible result and grants no new reach.
 
             // Let the webview load files out of the library, and nothing else.
             //
@@ -61,16 +72,17 @@ pub fn run() {
             commands::import_env,
             commands::list_models,
             commands::list_use_cases,
-            commands::detect_gaps,
             commands::models_for_use_case,
             commands::model_capabilities,
             commands::list_presets,
             commands::estimate_cost,
+            commands::price_status,
             commands::submit_job,
             commands::list_jobs,
             commands::cancel_job,
             commands::delete_job,
             commands::reveal_result,
+            commands::allow_media_preview,
             commands::watching_jobs,
             commands::library_root,
         ])

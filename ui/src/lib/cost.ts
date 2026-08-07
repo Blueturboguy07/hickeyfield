@@ -70,6 +70,77 @@ export function formatActual(actualUsd: number | null | undefined): string {
   return formatUsd(actualUsd);
 }
 
+/**
+ * What the session has cost, and how much of that is a guess.
+ *
+ * Providers mostly do not report what they charged — fal's status payload
+ * carries no cost field at all — so a meter that counts only settled charges
+ * reads "$0.00" after eighteen paid generations. That is the worst number this
+ * app can display: it is not merely unhelpful, it is the opposite of true, and
+ * it appears directly above a column of cards each showing a real estimate.
+ *
+ * So the meter falls back to the estimate and *says* that it did. The split is
+ * returned rather than folded into one number, because "$3.60, all measured"
+ * and "$3.60, all estimated" are different claims and the UI must not make the
+ * stronger one on the weaker evidence.
+ */
+export function sessionSpend(
+  jobs: Array<{ actualUsd?: number | null; estimatedUsd?: number | null }>,
+): {
+  usd: number;
+  /** Jobs whose provider told us what it charged. */
+  actualCount: number;
+  /** Jobs counted at our own estimate because nothing better exists. */
+  estimatedCount: number;
+  /** Jobs with no number at all. Excluded from the sum, never read as free. */
+  unknownCount: number;
+} {
+  let usd = 0;
+  let actualCount = 0;
+  let estimatedCount = 0;
+  let unknownCount = 0;
+
+  for (const job of jobs) {
+    // `?? ` and not `=== undefined`: the wire mapper normalises a missing cost
+    // to `null`, so an identity check against `undefined` matched nothing and
+    // every job fell through to "unpriced". Both spellings type-check against
+    // `number | null | undefined`, which is why it survived review.
+    const actual = usable(job.actualUsd);
+    if (actual !== null) {
+      usd += actual;
+      actualCount += 1;
+      continue;
+    }
+    const estimated = usable(job.estimatedUsd);
+    if (estimated !== null) {
+      usd += estimated;
+      estimatedCount += 1;
+      continue;
+    }
+    unknownCount += 1;
+  }
+
+  return { usd, actualCount, estimatedCount, unknownCount };
+}
+
+function usable(v: number | null | undefined): number | null {
+  return v === null || v === undefined || !Number.isFinite(v) || v < 0 ? null : v;
+}
+
+/**
+ * How the spend meter's own number should be qualified, in the meter's own
+ * words. Empty when every counted job reported a real charge.
+ */
+export function spendQualifier(spend: {
+  estimatedCount: number;
+  unknownCount: number;
+}): string | null {
+  const parts: string[] = [];
+  if (spend.estimatedCount > 0) parts.push(`${spend.estimatedCount} estimated`);
+  if (spend.unknownCount > 0) parts.push(`${spend.unknownCount} unpriced`);
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
 /** Sum for the spend meter. Unknown prices are excluded, never counted as 0. */
 export function totalSpend(values: Array<number | null | undefined>): {
   usd: number;

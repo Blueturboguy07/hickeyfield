@@ -41,6 +41,27 @@ fn json_or_err(resp: reqwest::blocking::Response) -> Result<Value, JobError> {
         .map_err(|e| JobError::Permanent(format!("malformed provider response: {e}")))
 }
 
+/// An error together with what actually caused it.
+///
+/// `reqwest`'s Display stops at "error sending request for url (…)" — the DNS
+/// failure, the TLS refusal, the reset connection are all one level down in the
+/// source chain. Printing only the top line makes every network failure look
+/// the same and none of them diagnosable.
+fn with_cause(e: &dyn std::error::Error) -> String {
+    let mut out = e.to_string();
+    let mut src = e.source();
+    while let Some(cause) = src {
+        let text = cause.to_string();
+        // Chains repeat themselves often enough that this is worth checking.
+        if !out.contains(&text) {
+            out.push_str(": ");
+            out.push_str(&text);
+        }
+        src = cause.source();
+    }
+    out
+}
+
 fn send(req: reqwest::blocking::RequestBuilder) -> Result<Value, JobError> {
     match req.send() {
         Ok(r) => json_or_err(r),
@@ -375,6 +396,61 @@ fn file_name_of(path: &str) -> String {
         .to_string()
 }
 
+/// The name to hand a storage service, reduced to characters that survive a
+/// round trip through a URL path and a signature.
+///
+/// The provider echoes this name into the object path, and what it does with a
+/// character outside ASCII is its business, not ours — fal replaced one with
+/// `?`, which then read as the start of a query string and broke the upload of
+/// a file whose only sin was being a macOS screenshot.
+///
+/// That character is worth naming, because it is invisible and extremely
+/// common: macOS puts a **narrow no-break space** (U+202F) before the AM/PM in
+/// every screenshot filename. `Screenshot 2026-08-06 at 3.52.23 PM.png` looks
+/// like plain ASCII in every UI that displays it and is not.
+///
+/// The local file keeps its real name; this is only what we tell the provider
+/// to call its copy. We use the returned URL and never the name, so there is
+/// nothing to lose by making it boring.
+fn safe_upload_name(path: &str) -> String {
+    let raw = file_name_of(path);
+    // Split on the last dot so the extension survives: fal sniffs content type
+    // from it, and an upload that arrives as `application/octet-stream` is
+    // rejected by some endpoints for a reason that names neither the file nor
+    // the extension.
+    let (stem, ext) = match raw.rsplit_once('.') {
+        Some((s, e)) if !s.is_empty() && e.chars().all(|c| c.is_ascii_alphanumeric()) => (s, e),
+        _ => (raw.as_str(), ""),
+    };
+
+    let mut out = String::with_capacity(stem.len());
+    let mut last_was_fill = false;
+    for c in stem.chars() {
+        if c.is_ascii_alphanumeric() || c == '-' || c == '_' {
+            out.push(c);
+            last_was_fill = false;
+        } else if !last_was_fill {
+            // One underscore per run, so a name of spaces does not become a
+            // name of underscores.
+            out.push('_');
+            last_was_fill = true;
+        }
+    }
+    // Long names are their own failure mode on object stores with a path limit.
+    let trimmed: String = out.trim_matches('_').chars().take(80).collect();
+    let stem = if trimmed.is_empty() {
+        "upload"
+    } else {
+        &trimmed
+    };
+
+    if ext.is_empty() {
+        stem.to_string()
+    } else {
+        format!("{stem}.{}", ext.to_ascii_lowercase())
+    }
+}
+
 /// Reject sizes the single-shot upload cannot carry, before any bytes move.
 ///
 /// Split out from [`read_upload`] so the limit can be tested without writing a
@@ -427,7 +503,7 @@ impl Uploader for FalClient {
                 ))
                 .header("Authorization", self.auth())
                 .json(&serde_json::json!({
-                    "file_name": file_name_of(path),
+                    "file_name": safe_upload_name(path),
                     "content_type": content_type,
                 })),
         )
@@ -450,7 +526,11 @@ impl Uploader for FalClient {
             .header("Content-Type", content_type)
             .body(bytes)
             .send()
-            .map_err(|e| format!("upload failed: {e}"))?;
+            // reqwest's own message is "error sending request for url (…)",
+            // which names the URL and nothing about why — the cause lives in
+            // the source chain, and dropping it left a transport failure
+            // indistinguishable from a rejection.
+            .map_err(|e| format!("upload failed: {}", with_cause(&e)))?;
         if !resp.status().is_success() {
             return Err(format!(
                 "upload rejected with HTTP {}",
@@ -743,5 +823,53 @@ mod tests {
     #[test]
     fn an_ordinary_file_passes_the_guard() {
         assert!(size_refusal(2 * 1024 * 1024, "frame.png").is_none());
+    }
+
+    #[test]
+    fn a_macos_screenshot_name_is_made_url_safe() {
+        // The exact name that failed, U+202F and all. macOS puts a narrow
+        // no-break space before AM/PM in every screenshot filename; fal turned
+        // it into `?` inside the object path, which reads as the start of a
+        // query string, and the upload died with a transport error naming a URL
+        // that looked perfectly ordinary on screen.
+        let name =
+            safe_upload_name("/Users/x/Desktop/Screenshot 2026-08-06 at 3.52.23\u{202f}PM.png");
+        assert_eq!(name, "Screenshot_2026-08-06_at_3_52_23_PM.png");
+        assert!(
+            name.is_ascii(),
+            "a name we hand a storage service must survive a URL path"
+        );
+    }
+
+    #[test]
+    fn the_extension_survives_because_fal_sniffs_content_type_from_it() {
+        assert_eq!(safe_upload_name("/tmp/clip.MP4"), "clip.mp4");
+        assert_eq!(safe_upload_name("/tmp/no-extension"), "no-extension");
+    }
+
+    #[test]
+    fn a_run_of_junk_collapses_rather_than_becoming_a_row_of_underscores() {
+        // Hyphens are legal in a URL path and are kept verbatim; only the
+        // characters being *replaced* collapse into a single underscore.
+        assert_eq!(safe_upload_name("/tmp/a   b -- c.png"), "a_b_--_c.png");
+    }
+
+    #[test]
+    fn a_name_with_nothing_usable_still_produces_a_name() {
+        assert_eq!(safe_upload_name("/tmp/???.png"), "upload.png");
+        assert_eq!(safe_upload_name("/tmp/\u{4e2d}\u{6587}.jpg"), "upload.jpg");
+    }
+
+    #[test]
+    fn a_very_long_name_is_bounded() {
+        let long = format!("/tmp/{}.png", "a".repeat(500));
+        let out = safe_upload_name(&long);
+        assert!(out.len() <= 84, "{} chars", out.len());
+        assert!(out.ends_with(".png"));
+    }
+
+    #[test]
+    fn a_dot_in_the_body_does_not_eat_the_extension() {
+        assert_eq!(safe_upload_name("/tmp/v1.2.final.mov"), "v1_2_final.mov");
     }
 }

@@ -6,6 +6,7 @@
 //! rather than being cached somewhere it could leak into a log.
 
 use crate::library::{default_root, Library};
+use crate::pricing::Prices;
 use crate::runner::{ClientFactory, OnUpdate, Runner};
 use crate::store::SqliteStore;
 use crate::vault;
@@ -20,6 +21,8 @@ pub struct AppState {
     pub store: Arc<SqliteStore>,
     pub runner: Runner,
     pub library: Arc<Library>,
+    /// Live provider prices. Every USD figure the app shows comes from here.
+    pub prices: Arc<Prices>,
 }
 
 /// Build a provider client for `provider:slug`, or `None` when the user has no
@@ -121,10 +124,16 @@ impl AppState {
             Arc::clone(&library),
         );
 
+        // Seeded from the compiled-in snapshot so the first paint has numbers,
+        // then refreshed from the live feeds off-thread.
+        let prices = Arc::new(Prices::bundled());
+        prices.start_refresh();
+
         Ok(AppState {
             store,
             runner,
             library,
+            prices,
         })
     }
 
@@ -288,8 +297,75 @@ pub fn submit_to_provider(
     // references. A user attached a clip, asked for an edit, and received an
     // unrelated text-to-video generation, billed in full, because fal ignored
     // the field it did not recognise.
-    if route.provider == ProviderId::Fal {
-        if let Some(schema) = halation_core::fal_schema::for_endpoint(&endpoint) {
+    let fal_schema = if route.provider == ProviderId::Fal {
+        halation_core::fal_schema::for_endpoint(&endpoint)
+    } else {
+        None
+    };
+
+    // ── The shape of the output, decided once ──────────────────────────────
+    //
+    // Three things used to have an opinion about the aspect ratio: the chip
+    // row, the request body, and — whenever the field was simply omitted — the
+    // provider's own default. They could disagree, and the user only found out
+    // by looking at the result. `AspectPlan` collapses that to one decision,
+    // made here, which both the wire and the job record then report.
+    {
+        use halation_core::aspect::AspectPlan;
+
+        // The endpoint's own answer where we have it, the model's spec where we
+        // do not. Same question, two sources of truth about two different APIs.
+        let aspect_key = match fal_schema.as_ref() {
+            Some(s) => s
+                .accepts("aspect_ratio")
+                .then(|| "aspect_ratio".to_string()),
+            None => ["aspect_ratio", "aspect"]
+                .into_iter()
+                .find_map(|n| model.spec.flag(n).map(|f| f.name.clone())),
+        };
+        let requested = job
+            .settings
+            .get("aspect")
+            .and_then(|v| v.as_str())
+            .map(str::to_string);
+        let fallback = model.spec.capabilities().default_aspect.clone();
+
+        let plan = AspectPlan::decide(
+            aspect_key.is_some(),
+            requested.as_deref(),
+            fallback.as_deref(),
+            !media.is_empty(),
+        );
+
+        match (&plan, aspect_key) {
+            // Always explicit. An omitted field is exactly how the provider's
+            // default became a third opinion.
+            (p, Some(key)) if p.is_locked() => {
+                body.insert(
+                    key,
+                    serde_json::Value::String(p.wire_value().unwrap_or_default().to_string()),
+                );
+            }
+            // No control on this endpoint: carrying the key would be dropped a
+            // few lines below anyway, and removing it here keeps the reason
+            // attached to the decision rather than to a generic sweep.
+            (_, key) => {
+                if let Some(k) = key {
+                    body.remove(&k);
+                }
+                body.remove("aspect");
+                body.remove("aspect_ratio");
+            }
+        }
+
+        if let Some(note) = plan.note(&model.display_name, requested.as_deref()) {
+            tracing::info!("{note}");
+            job.advisories.push(note);
+        }
+    }
+
+    if let Some(schema) = fal_schema.as_ref() {
+        {
             if !media.is_empty() && !schema.takes_media() {
                 return Err(JobError::Permanent(format!(
                     "{} takes a prompt only on this provider — it cannot use the {} you attached, and would silently ignore it",
@@ -310,8 +386,10 @@ pub fn submit_to_provider(
             // row still read 8s.
             //
             // So: quiet for the rest, loud for the ones the user set.
-            const USER_FACING: [&str; 4] =
-                ["duration", "resolution", "aspect_ratio", "generate_audio"];
+            // Aspect is deliberately absent: it is decided by `AspectPlan`
+            // above, which explains *who* decides instead of only reporting
+            // that a control was dropped.
+            const USER_FACING: [&str; 3] = ["duration", "resolution", "generate_audio"];
             let unknown: Vec<String> = body
                 .keys()
                 .filter(|k| !schema.accepts(k))
@@ -325,6 +403,12 @@ pub fn submit_to_provider(
                 tracing::warn!("{endpoint} does not accept `{k}` — dropping it");
                 body.remove(k);
             }
+            // Then make what remains speak the endpoint's own spelling and
+            // type. Without this the settings object's `duration: 4.0` reaches
+            // an endpoint that enumerates `'4'` as a string and 422s.
+            halation_core::fal_schema::reconcile(schema, &mut body)
+                .map_err(|r| JobError::Permanent(format!("{} — {r}", model.display_name)))?;
+
             if !ignored_settings.is_empty() {
                 // Recorded on the job rather than refused: the generation is
                 // still the one the user asked for, it just cannot honour that

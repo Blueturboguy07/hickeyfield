@@ -4,7 +4,9 @@ import {
   displayUrl,
   isPlayableVideo,
   isSaved,
+  nearestAspect,
   posterFor,
+  previewSrc,
   setPathConverter,
 } from "../media";
 import type { JobResult } from "../../types";
@@ -109,5 +111,69 @@ describe("aspectRatioOf", () => {
     expect(aspectRatioOf(result({ width: 1080, height: 1920 }))).toBeCloseTo(
       1080 / 1920,
     );
+  });
+});
+
+describe("previewSrc", () => {
+  it("appends a start time so a paused card paints a frame", () => {
+    // Without this the element decodes nothing under preload="metadata" and
+    // renders as an empty box — the exact symptom of the feed showing grey
+    // rectangles next to eighteen perfectly good files on disk.
+    const r = result({ kind: "video", localPath: "/tmp/clip.mp4" });
+    expect(previewSrc(r)).toBe("asset:///tmp/clip.mp4#t=0.1");
+  });
+
+  it("does not seek to 0, where generated clips are usually black", () => {
+    expect(previewSrc(result({ localPath: "/tmp/c.mp4" }))).not.toMatch(
+      /#t=0$/,
+    );
+  });
+
+  it("leaves an existing fragment alone rather than making it unparseable", () => {
+    const r = result({ url: "https://p.example/clip.mp4#t=2" });
+    expect(previewSrc(r)).toBe("https://p.example/clip.mp4#t=2");
+  });
+
+  it("still works before the download lands", () => {
+    expect(previewSrc(result({ url: "https://p.example/x.mp4" }))).toBe(
+      "https://p.example/x.mp4#t=0.1",
+    );
+  });
+});
+
+describe("nearestAspect", () => {
+  const OFFERED = ["16:9", "9:16", "1:1", "4:3", "3:4"];
+
+  it("snaps a portrait phone video to the portrait option", () => {
+    // The bug: animating a 1080x1920 clip requested 16:9 because that was the
+    // untouched default, and the result came back landscape.
+    expect(nearestAspect(1080 / 1920, OFFERED)).toBe("9:16");
+  });
+
+  it("snaps an ordinary phone photo to 4:3, not 1:1", () => {
+    expect(nearestAspect(4032 / 3024, OFFERED)).toBe("4:3");
+  });
+
+  it("keeps a widescreen clip widescreen", () => {
+    expect(nearestAspect(1920 / 1080, OFFERED)).toBe("16:9");
+  });
+
+  it("treats a portrait and its mirror as equally far from square", () => {
+    // A linear comparison would put 2:1 nearer to 1:1 than 1:2 is, so a tall
+    // clip would snap to square more readily than a wide one.
+    expect(nearestAspect(2, ["1:1", "2:1", "1:2"])).toBe("2:1");
+    expect(nearestAspect(0.5, ["1:1", "2:1", "1:2"])).toBe("1:2");
+  });
+
+  it("ignores an option that is not a ratio", () => {
+    // `ratioFromAspectLabel` falls back to 16:9 for anything it cannot read,
+    // which would make "auto" a perfect match for every widescreen clip.
+    expect(nearestAspect(1.77, ["auto", "1:1"])).toBe("1:1");
+  });
+
+  it("returns null rather than guessing", () => {
+    expect(nearestAspect(1.77, [])).toBeNull();
+    expect(nearestAspect(0, OFFERED)).toBeNull();
+    expect(nearestAspect(Number.NaN, OFFERED)).toBeNull();
   });
 });

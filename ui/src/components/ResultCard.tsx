@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { previewOf } from "../lib/media-input";
 import type { JobSet } from "../types";
 import {
@@ -5,11 +6,11 @@ import {
   isPlayableVideo,
   posterFor,
   ratioFromAspectLabel,
-  displayUrl,
 } from "../lib/media";
 import { isFailure, isRunning, statusLabel } from "../lib/status";
 import { RainbowPlaceholder, StatusLine } from "./Loader";
 import { AlertIcon } from "./Icons";
+import { VideoPreview } from "./VideoPreview";
 
 /**
  * One generation in the centre feed. No caption: the prompt, the model and
@@ -31,14 +32,21 @@ export function ResultCard({
   const failed = isFailure(job.status);
   const first = job.results[0];
   const requested = ratioFromAspectLabel(job.settings?.aspect ?? "16:9");
-  const mediaRatio = first ? aspectRatioOf(first) : requested;
-  // Portrait media is letterboxed into a wide panel rather than given a card
-  // of its own shape: a 9:16 result across a 1030px column would be nearly two
-  // screens tall, and scrolling past one result is not a feed.
-  const portrait = mediaRatio < 1;
-  // A running card also holds the wide frame, so the card does not resize the
-  // moment the result lands and shunt the rest of the feed down.
-  const ratio = running || portrait ? 16 / 9 : mediaRatio;
+
+  // What the file turned out to be, which is not always what was asked for:
+  // an endpoint with no aspect control returns the shape of its input, so the
+  // requested ratio is a prediction and the measured one is the truth. Held in
+  // state because it only becomes knowable once the media loads.
+  const [measured, setMeasured] = useState<number | null>(null);
+
+  // Order of preference: the file, then the file's declared size, then the
+  // request. A card previously used the request alone and every result — a 9:16
+  // vertical clip included — was drawn in a landscape box.
+  const ratio = running
+    ? // A running card holds the requested shape so it does not jump when the
+      // result lands, which would shunt everything below it down the page.
+      requested
+    : (measured ?? (first ? aspectRatioOf(first) : requested));
 
   // A running generation is backed by whatever input we already have — the
   // start frame, or a reference. Blurred and scaled past the edges it reads as
@@ -49,6 +57,7 @@ export function ResultCard({
   return (
     <article
       className="result-card"
+      data-portrait={ratio < 1 || undefined}
       data-selected={selected || undefined}
       data-status={job.status}
       aria-label={`Generation ${job.id}, ${statusLabel(job.status)}`}
@@ -87,22 +96,22 @@ export function ResultCard({
           </span>
         ) : first ? (
           isPlayableVideo(first) ? (
-            <video
+            <VideoPreview
+              result={first}
               className="result-card-media"
-              data-letterboxed={portrait || undefined}
-              src={displayUrl(first)}
-              poster={first.poster}
-              loop
-              muted
-              playsInline
-              preload="none"
+              onMeasured={setMeasured}
             />
           ) : (
             <img
               className="result-card-media"
-              data-letterboxed={portrait || undefined}
               src={posterFor(first)}
               alt=""
+              onLoad={(e) => {
+                const el = e.currentTarget;
+                if (el.naturalWidth > 0 && el.naturalHeight > 0) {
+                  setMeasured(el.naturalWidth / el.naturalHeight);
+                }
+              }}
             />
           )
         ) : (

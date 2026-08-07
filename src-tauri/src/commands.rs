@@ -584,51 +584,38 @@ impl From<&SettingsDto> for Billable {
 /// render that as "price unavailable" — never as free.
 #[tauri::command]
 pub fn estimate_cost(
+    state: State<'_, AppState>,
     model_id: String,
     route_id: String,
     settings: SettingsDto,
 ) -> Option<Estimate> {
+    estimate_with(&state.prices, &model_id, &route_id, &settings)
+}
+
+/// The body of [`estimate_cost`], without the Tauri handle.
+///
+/// Split out so the cost path stays testable without standing up an app: the
+/// invariant worth guarding here — unknown is `None`, never `0.0` — should not
+/// depend on a harness a future edit would delete rather than fix.
+fn estimate_with(
+    prices: &crate::pricing::Prices,
+    model_id: &str,
+    route_id: &str,
+    settings: &SettingsDto,
+) -> Option<Estimate> {
     let reg = registry();
-    let model = reg.get(&model_id)?;
-    let route = model.route(&route_id)?;
-    model.estimate(route, &Billable::from(&settings))
+    let model = reg.get(model_id)?;
+    let route = model.route(route_id)?;
+    prices.estimate(model, route, &Billable::from(settings))
 }
 
-/// What the prompt leaves for the model to guess.
-#[derive(Serialize)]
-pub struct GapDto {
-    pub id: String,
-    pub question: String,
-    pub consequence: String,
-    pub options: Vec<String>,
-}
-
-/// Asked between Generate and submit, so an underspecified prompt gets one
-/// chance to be specified before it costs anything. Every question is
-/// skippable; detection is deterministic and instant.
+/// Where the prices on screen came from and how old they are.
+///
+/// Deliberately exposed. A number with no provenance is the kind of thing a
+/// user only checks after it has already been wrong.
 #[tauri::command]
-pub fn detect_gaps(
-    prompt: String,
-    #[allow(non_snake_case)] useCase: String,
-    #[allow(non_snake_case)] mediaRoles: Vec<String>,
-) -> Vec<GapDto> {
-    let Some(uc) = halation_core::UseCase::from_slug(&useCase) else {
-        return Vec::new();
-    };
-    let roles: Vec<halation_core::MediaRole> = mediaRoles
-        .iter()
-        .filter_map(|r| serde_json::from_value(serde_json::Value::String(r.clone())).ok())
-        .collect();
-
-    halation_core::gaps::detect(&prompt, uc, &roles)
-        .into_iter()
-        .map(|g| GapDto {
-            id: g.id.to_string(),
-            question: g.question,
-            consequence: g.consequence.to_string(),
-            options: g.options.into_iter().map(String::from).collect(),
-        })
-        .collect()
+pub fn price_status(state: State<'_, AppState>) -> crate::pricing::PriceStatus {
+    state.prices.status()
 }
 
 // ── Jobs ───────────────────────────────────────────────────────────────────
@@ -651,10 +638,6 @@ pub struct SubmitInput {
     /// Ollama tag to rewrite with. `None` sends the prompt as written.
     #[serde(default)]
     pub rewriter: Option<String>,
-    /// Answers to the follow-up questions, `[gap_id, answer]`. Skipped
-    /// questions are simply absent — a skip must cost nothing.
-    #[serde(default)]
-    pub gap_answers: Vec<(String, String)>,
 }
 
 #[tauri::command]
@@ -673,12 +656,9 @@ pub fn submit_job(state: State<'_, AppState>, input: SubmitInput) -> Result<Stri
     // three enhance rules, and — when asked and able — rewrites the scene
     // through the filmmaking corpus. Runs *before* pricing and routing because
     // a refusal here must cost nothing.
-    // Fold in whatever the follow-ups answered, before the rewrite sees it.
-    let answered = halation_core::gaps::apply(&input.prompt, &input.gap_answers);
-
     let compiled = crate::harness::compile(
         model,
-        &answered,
+        &input.prompt,
         input.preset_id.as_deref(),
         &input.media,
         input.settings.enhance,
@@ -694,7 +674,7 @@ pub fn submit_job(state: State<'_, AppState>, input: SubmitInput) -> Result<Stri
         &available,
         RoutePolicy::Cheapest,
         input.route_id.as_deref(),
-        |r| model.estimate(r, &billable).map(|e| e.usd),
+        |r| state.prices.usd(model, r, &billable),
     )
     .map_err(|e| e.to_string())?;
 
@@ -720,7 +700,7 @@ pub fn submit_job(state: State<'_, AppState>, input: SubmitInput) -> Result<Stri
         created_at: now_secs(),
         updated_at: now_secs(),
         results: vec![],
-        estimated_usd: model.estimate(route, &billable).map(|e| e.usd),
+        estimated_usd: state.prices.usd(model, route, &billable),
         actual_usd: None,
         fail_reason: None,
         settings: serde_json::to_value(&input.settings).unwrap_or(serde_json::Value::Null),
@@ -804,6 +784,40 @@ pub fn reveal_result(state: State<'_, AppState>, path: String) -> Result<(), Str
     tauri_plugin_opener::reveal_item_in_dir(&canonical).map_err(|e| e.to_string())
 }
 
+/// Let the webview display files the user just picked in the native dialog.
+///
+/// The asset protocol is scoped to the library, deliberately — the webview has
+/// no business reading arbitrary disk. But an attachment lives wherever the
+/// user keeps it, so without a grant the settings rail can only show a filename
+/// where a thumbnail belongs, and nothing in the app can measure the shape of
+/// an input it is about to animate.
+///
+/// The grant is per file and only ever for a path that came back from the OS
+/// file dialog, which is the user pointing at it as directly as the platform
+/// allows. Nothing here accepts a path the webview invented: a caller passing a
+/// path the user did not choose is granting access to something it already had
+/// the path to, and the dialog is the only thing that produces these.
+#[tauri::command]
+pub fn allow_media_preview(app: tauri::AppHandle, paths: Vec<String>) -> Result<(), String> {
+    use tauri::Manager;
+    for p in &paths {
+        let path = std::path::Path::new(p);
+        // Canonicalise first: a grant for a path with `..` in it is a grant for
+        // wherever that resolves, which is not what the caller asked for and
+        // not what the user picked.
+        let real = path
+            .canonicalize()
+            .map_err(|e| format!("could not resolve {p}: {e}"))?;
+        if !real.is_file() {
+            return Err(format!("{p} is not a file"));
+        }
+        app.asset_protocol_scope()
+            .allow_file(&real)
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 /// Ids the runner is actively polling right now.
 ///
 /// Distinct from "status is in_progress": a row can be non-terminal in the
@@ -856,10 +870,11 @@ mod tests {
     #[test]
     fn an_unknown_price_is_null_not_zero() {
         // The single most dangerous possible bug in this file.
-        let got = estimate_cost(
-            "definitely-not-a-model".into(),
-            "fal:whatever".into(),
-            SettingsDto::default(),
+        let got = estimate_with(
+            &crate::pricing::Prices::bundled(),
+            "definitely-not-a-model",
+            "fal:whatever",
+            &SettingsDto::default(),
         );
         assert!(got.is_none());
     }
@@ -873,10 +888,11 @@ mod tests {
             .expect("a launch video model");
         let route = &m.routes[0];
 
-        let est = estimate_cost(
-            m.id.clone(),
-            route.id.clone(),
-            SettingsDto {
+        let est = estimate_with(
+            &crate::pricing::Prices::bundled(),
+            &m.id,
+            &route.id,
+            &SettingsDto {
                 duration: Some(8.0),
                 resolution: Some("720p".into()),
                 aspect: Some("16:9".into()),

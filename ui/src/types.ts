@@ -79,14 +79,6 @@ export interface PresetFamily {
   variants?: PresetVariant[];
 }
 
-/** Something the prompt leaves for the model to decide. */
-export interface Gap {
-  id: string;
-  question: string;
-  /** What happens if you skip it. Shown so the question earns its friction. */
-  consequence: string;
-  options: string[];
-}
 
 export interface CostEstimate {
   usd: number;
@@ -215,8 +207,6 @@ export interface SubmitInput {
   presetId: string | null;
   settings: GenSettings;
   media: MediaRef[];
-  /** `[gapId, answer]`. Skipped questions are absent. */
-  gapAnswers?: [string, string][];
 }
 
 /**

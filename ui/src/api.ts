@@ -10,7 +10,6 @@ import type {
   CostEstimate,
   ModelCapabilities,
   GenSettings,
-  Gap,
   JobResult,
   JobSet,
   MediaRef,
@@ -573,22 +572,6 @@ export async function modelsForUseCase(useCase: string): Promise<Model[]> {
  * Deterministic and instant in Rust — a question that appears on one run and
  * not the next would be worse than none.
  */
-export async function detectGaps(args: {
-  prompt: string;
-  useCase: string;
-  mediaRoles: string[];
-}): Promise<Gap[]> {
-  // An object, not three positionals. `detectGaps(tab, prompt, roles)` type-
-  // checked cleanly against `(prompt, useCase, roles)` because both are
-  // strings, and would have asked video questions about an image job.
-  try {
-    return await invoke<Gap[]>("detect_gaps", args);
-  } catch {
-    // No shell, or the command is missing: generating must never be blocked by
-    // an optional prompt to improve the prompt.
-    return [];
-  }
-}
 
 export async function submitJob(input: SubmitInput): Promise<string> {
   try {
@@ -597,7 +580,7 @@ export async function submitJob(input: SubmitInput): Promise<string> {
     // fields gave "command submit_job missing required key input".
     const res = await invoke<{ job_set_id?: string; jobSetId?: string }>(
       "submit_job",
-      { input: { ...input, gap_answers: input.gapAnswers ?? [] } } as unknown as Record<string, unknown>,
+      { input } as unknown as Record<string, unknown>,
     );
     return res.job_set_id ?? res.jobSetId ?? "";
   } catch (e) {

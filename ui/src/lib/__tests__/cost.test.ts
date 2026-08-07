@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   costBasisNote,
+  sessionSpend,
+  spendQualifier,
   formatActual,
   formatCost,
   formatUsd,
@@ -84,5 +86,61 @@ describe("totalSpend", () => {
 
   it("returns a zero total with no entries", () => {
     expect(totalSpend([])).toEqual({ usd: 0, unknownCount: 0 });
+  });
+});
+
+describe("sessionSpend", () => {
+  // The regression this exists for: eighteen paid generations, each carrying a
+  // real estimate, displayed as "$0.00 · 18 unpriced". The wire mapper writes
+  // `null` for a missing actual cost and the meter tested `=== undefined`, so
+  // every job fell through to unknown.
+  it("counts the estimate when the provider reported no charge", () => {
+    const spend = sessionSpend([
+      { actualUsd: null, estimatedUsd: 0.2 },
+      { actualUsd: null, estimatedUsd: 0.2 },
+    ]);
+    expect(spend.usd).toBeCloseTo(0.4);
+    expect(spend.estimatedCount).toBe(2);
+    expect(spend.unknownCount).toBe(0);
+  });
+
+  it("treats an absent field the same as an explicit null", () => {
+    // Rust's `Option<f64>` is `null` on the wire; a hand-built object in a test
+    // or a recipe import is `undefined`. Both mean the same thing.
+    expect(sessionSpend([{ estimatedUsd: 0.2 }]).usd).toBeCloseTo(0.2);
+  });
+
+  it("prefers a reported charge over our own guess", () => {
+    const spend = sessionSpend([{ actualUsd: 0.31, estimatedUsd: 0.2 }]);
+    expect(spend.usd).toBeCloseTo(0.31);
+    expect(spend.actualCount).toBe(1);
+    expect(spend.estimatedCount).toBe(0);
+  });
+
+  it("never reads an unknown price as free", () => {
+    const spend = sessionSpend([
+      { actualUsd: null, estimatedUsd: null },
+      { actualUsd: null, estimatedUsd: 0.2 },
+    ]);
+    expect(spend.usd).toBeCloseTo(0.2);
+    expect(spend.unknownCount).toBe(1);
+  });
+
+  it("counts a genuine zero as measured, not as missing", () => {
+    // A local ComfyUI route really does cost nothing, and that is a fact worth
+    // reporting rather than an absence of one.
+    const spend = sessionSpend([{ actualUsd: 0 }]);
+    expect(spend.actualCount).toBe(1);
+    expect(spend.unknownCount).toBe(0);
+  });
+
+  it("says which part of the total is a guess", () => {
+    expect(spendQualifier({ estimatedCount: 18, unknownCount: 0 })).toBe(
+      "18 estimated",
+    );
+    expect(spendQualifier({ estimatedCount: 2, unknownCount: 3 })).toBe(
+      "2 estimated · 3 unpriced",
+    );
+    expect(spendQualifier({ estimatedCount: 0, unknownCount: 0 })).toBeNull();
   });
 });

@@ -9,8 +9,22 @@ no credits, no plan gating, and nothing to pay us.
 > Halation is an independent open-source project. It is not affiliated with,
 > endorsed by, or sponsored by Higgsfield, Inc.
 
-**Status: pre-alpha.** M0 (foundations) is in place — the app builds, signs and
-runs on macOS. It does not generate anything yet.
+**Status: early, and honest about it.** Halation generates: you add a provider
+key, pick a use case, attach media if the job needs it, and get real video and
+images back, saved to a folder you choose. What is *verified end to end* is the
+fal route on macOS — upload, submit, poll, download, play. Windows builds in CI
+on every commit but has not been exercised by hand. The surfaces beyond the
+generator (library, audio, studios) are not built yet.
+
+## Install
+
+The guided install walks you through it start to finish, on macOS or Windows:
+
+**[publikhq.com/halation](https://publikhq.com/halation)**
+
+Or build it yourself — see [Development](#development). You will need a key from
+at least one provider; [fal.ai](https://fal.ai) alone is enough to use
+everything the app can currently reach.
 
 ## Why
 
@@ -32,6 +46,28 @@ didn't use.
 
 Halation always shows the real USD cost before you submit, computed from live
 provider price feeds rather than an opaque credit integer.
+
+## What it does today
+
+The generator is organised by **use case** rather than by model, and each one
+offers only the models that can actually do that job — so a model that cannot
+take a video never appears under *Edit Video*, instead of failing after you have
+attached one and pressed Generate.
+
+- **New Video** · text to video
+- **Animate Image** · a still becomes a shot
+- **Edit Video** · change something in footage you already have
+- **New Image** · text to image
+
+Everything a request depends on is checked against the provider's own published
+schema before anything is sent: which inputs the endpoint accepts, which values
+it enumerates, and what shape the result will be. A setting the endpoint does
+not have is reported rather than silently dropped, and a value it will not
+accept is refused before you are charged rather than after.
+
+Prompts can be expanded through a filmmaking corpus — camera, lens, light,
+motion — either deterministically from a preset, or through a local model via
+Ollama. Nothing is sent anywhere for this unless you ask for it.
 
 ## Architecture
 

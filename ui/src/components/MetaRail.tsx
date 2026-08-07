@@ -1,6 +1,6 @@
 import { forwardRef } from "react";
 import type { JobSet, Model } from "../types";
-import { totalSpend } from "../lib/cost";
+import { sessionSpend, spendQualifier } from "../lib/cost";
 import { formatUsd } from "../lib/cost";
 import { EmptyState } from "./EmptyState";
 import { MetaCard } from "./MetaCard";
@@ -9,9 +9,9 @@ import { MetaCard } from "./MetaCard";
  * The right column. One card per generation, in the same order as the feed, so
  * the two columns read as rows even though they scroll independently.
  *
- * The spend meter counts only priced jobs and says how many it could not
- * price, rather than quietly treating unknown as zero and under-reporting what
- * the session cost.
+ * The spend meter prefers what a provider actually charged, falls back to our
+ * own estimate, and labels which it used — rather than reporting `$0.00` for a
+ * session of paid generations because almost no provider reports a charge.
  */
 export const MetaRail = forwardRef<
   HTMLElement,
@@ -24,19 +24,22 @@ export const MetaRail = forwardRef<
     onDelete: (id: string) => void;
   }
 >(function MetaRail({ jobs, models, selectedId, onSelect, onRerun, onDelete }, ref) {
-  const spend = totalSpend(
-    jobs.map((j) => (j.actualUsd === undefined ? j.estimatedUsd : j.actualUsd)),
-  );
+  const spend = sessionSpend(jobs);
+  const qualifier = spendQualifier(spend);
+  // The tilde is the whole disclosure at a glance: an exact figure and an
+  // approximate one must not be typeset identically.
+  const approximate = spend.estimatedCount > 0;
 
   return (
     <aside className="rail rail-meta" aria-label="Generation details" ref={ref}>
       <div className="spend-meter">
         <span className="spend-meter-label">Session spend</span>
-        <span className="spend-meter-value">{formatUsd(spend.usd)}</span>
-        {spend.unknownCount > 0 ? (
-          <span className="spend-meter-note">
-            {spend.unknownCount} unpriced
-          </span>
+        <span className="spend-meter-value">
+          {approximate ? "~" : ""}
+          {formatUsd(spend.usd)}
+        </span>
+        {qualifier ? (
+          <span className="spend-meter-note">{qualifier}</span>
         ) : null}
       </div>
 

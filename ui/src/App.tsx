@@ -14,7 +14,6 @@ import {
   localEndpoints,
   providerInfo,
   submitJob,
-  detectGaps,
   modelCapabilities,
   deleteJob,
   subscribeJobs,
@@ -23,7 +22,6 @@ import {
 import type {
   CostEstimate,
   GenSettings,
-  Gap,
   JobSet,
   MediaRef,
   MediaRole,
@@ -34,6 +32,8 @@ import type {
   WorkspaceTab,
 } from "./types";
 import { capabilitiesFor, resolveSettings, selectRoute } from "./lib/variants";
+import { measureAspect, nearestAspect } from "./lib/media";
+import { previewOf } from "./lib/media-input";
 import { isRunning } from "./lib/status";
 import {
   fromFileList,
@@ -55,7 +55,6 @@ import { ModelPicker } from "./components/ModelPicker";
 import { Onboarding } from "./components/Onboarding";
 import { Settings } from "./components/Settings";
 import { ConfirmDelete } from "./components/ConfirmDelete";
-import { FollowUps } from "./components/FollowUps";
 import { SettingsIcon } from "./components/Icons";
 import "./app.css";
 
@@ -291,9 +290,46 @@ export default function App() {
     };
   }, [tab, useCases.length]);
 
+  // Whether the user has picked an aspect themselves. Once they have, nothing
+  // may move it under them — an attachment that silently overrode a deliberate
+  // choice would be its own inconsistency, just a politer one.
+  const aspectChosen = useRef(false);
+
   const patchSettings = useCallback((patch: Partial<GenSettings>) => {
+    if (patch.aspect !== undefined) aspectChosen.current = true;
     setSettings((prev) => ({ ...prev, ...patch }));
   }, []);
+
+  /**
+   * Follow the shape of what was attached.
+   *
+   * The default aspect is a landscape one, so animating a portrait photo asked
+   * for 16:9 and came back landscape — the user having said nothing about
+   * aspect at all, and the interface having shown them a ratio they never
+   * picked. Attaching a file is the clearest statement of intent available
+   * about the shape of the result, so it sets the chip, visibly and
+   * overridably, rather than being quietly contradicted at submit time.
+   */
+  useEffect(() => {
+    if (aspectChosen.current) return;
+    const first = media[0];
+    const url = first ? previewOf(first) : undefined;
+    if (!url || capabilities.aspects.length === 0) return;
+
+    let live = true;
+    const kind = first.role.includes("video") ? "video" : "image";
+    void measureAspect(url, kind).then((ratio) => {
+      if (!live || ratio === null) return;
+      const snapped = nearestAspect(ratio, capabilities.aspects);
+      // Not through `patchSettings`: this is us following the user, not the
+      // user making a choice, and recording it as a choice would freeze the
+      // chip against the *next* attachment.
+      if (snapped) setSettings((prev) => ({ ...prev, aspect: snapped }));
+    });
+    return () => {
+      live = false;
+    };
+  }, [media, capabilities.aspects]);
 
   /**
    * Attach files to a role.
@@ -355,13 +391,9 @@ export default function App() {
     [forget],
   );
 
-  // Follow-ups sit between Generate and submit. `null` means none pending.
-  const [gaps, setGaps] = useState<Gap[] | null>(null);
-
   const send = useCallback(
-    async (gapAnswers: [string, string][]) => {
+    async () => {
       if (!modelId || !route) return;
-      setGaps(null);
       setPending(true);
       setSubmitError(null);
       try {
@@ -372,7 +404,6 @@ export default function App() {
           presetId,
           settings,
           media,
-          gapAnswers,
         });
         setJobs(await listJobs());
       } catch (e) {
@@ -391,19 +422,8 @@ export default function App() {
 
   const onSubmit = useCallback(async () => {
     if (!modelId || !route) return;
-    // Ask before spending. An empty list submits straight through, so a
-    // well-specified prompt never sees a dialog.
-    const found = await detectGaps({
-      prompt,
-      useCase: tab,
-      mediaRoles: media.map((m) => m.role),
-    });
-    if (found.length > 0) {
-      setGaps(found);
-      return;
-    }
-    await send([]);
-  }, [modelId, route, prompt, media, tab, send]);
+    await send();
+  }, [modelId, route, send]);
 
   const onRerun = useCallback(
     (job: JobSet) => {
@@ -493,13 +513,6 @@ export default function App() {
             aria-label="Settings"
             onClick={() => setOverlay("settings")}
           >
-            <FollowUps
-        open={gaps !== null}
-        gaps={gaps ?? []}
-        onSkip={() => void send([])}
-        onAnswer={(a) => void send(a)}
-      />
-
       <ConfirmDelete
         open={pendingDelete !== null}
         hasFiles={Boolean(

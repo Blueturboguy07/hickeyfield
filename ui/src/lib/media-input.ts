@@ -124,9 +124,26 @@ export async function pickViaDialog(
     });
     if (picked === null) return [];
     const paths = Array.isArray(picked) ? picked : [picked];
+
+    // A local path is not loadable by the webview until the asset protocol is
+    // told about it, so ask before building a preview URL. Without this the
+    // rail shows a filename where a thumbnail belongs and nothing can measure
+    // the shape of the input.
+    let convert: ((p: string) => string) | null = null;
+    try {
+      const { invoke, convertFileSrc } = await import("@tauri-apps/api/core");
+      await invoke("allow_media_preview", { paths });
+      convert = convertFileSrc;
+    } catch {
+      // No grant, no preview — the filename chip still works, and an
+      // attachment the user cannot see a thumbnail of is a smaller failure
+      // than an attachment they cannot make at all.
+    }
+
     return paths.map((path) => ({
       role,
       source: { kind: "local", path } as MediaSource,
+      preview: convert ? convert(path) : undefined,
       name: basename(path),
     }));
   } catch {

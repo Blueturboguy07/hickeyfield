@@ -204,3 +204,23 @@
   padding: var(--space-150) var(--space-300);
   font-size: var(--text-xs);
 }
+
+/* A card is the shape of its result, not the shape of the column.
+ *
+ * The height cap is what makes that affordable: a 9:16 clip drawn at the full
+ * width of a ~1030px column is close to two screens tall, and a feed you can
+ * only see one item of is not a feed. Fixing the height and letting the aspect
+ * ratio derive the width keeps the true shape and keeps the item glanceable. */
+.result-card[data-portrait] .result-card-surface {
+  width: auto;
+  height: min(70vh, 720px);
+  max-width: 100%;
+  margin-inline: auto;
+}
+
+/* Contained rather than cropped once the box is the media's own shape: there
+ * is nothing left to crop to, and `cover` would only shave edges off a frame
+ * that already fits. */
+.result-card[data-portrait] .result-card-media {
+  object-fit: contain;
+}

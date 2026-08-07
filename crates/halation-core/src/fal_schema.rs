@@ -100,6 +100,95 @@ impl EndpointSchema {
     }
 }
 
+/// A value the endpoint will not accept, named in words a user can act on.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Refusal {
+    pub field: String,
+    pub offered: Vec<String>,
+    pub sent: String,
+}
+
+impl std::fmt::Display for Refusal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "this endpoint takes {} of {}, not {}",
+            self.field.replace('_', " "),
+            self.offered.join(", "),
+            self.sent
+        )
+    }
+}
+
+/// Rewrite a request body into the spelling *and the JSON type* the endpoint
+/// publishes, before anything is sent.
+///
+/// The type half is not pedantry. fal's Seedance endpoint declares `duration`
+/// as an enumeration of **strings** — `'auto' | '4' | … | '15'` — and we were
+/// sending the number `4.0` straight out of the settings object, because the
+/// binder inserts each setting verbatim. The result is a 422 that names our own
+/// field back at us and looks, to the user, exactly like the app being broken:
+///
+///   `Input should be 'auto', '4', … or '15'` … `"input": 4.0`
+///
+/// Only fields the endpoint actually enumerates are touched, which keeps this
+/// from becoming a general-purpose coercion layer that guesses. A value with no
+/// published enum goes over the wire exactly as built.
+///
+/// A value that is genuinely not on offer is returned as a [`Refusal`] rather
+/// than quietly swapped for a neighbour. Substituting 6s for a requested 8s
+/// would produce a generation the user did not ask for and charge them for it —
+/// the same silent-substitution failure this module was written to stop.
+pub fn reconcile(
+    schema: &EndpointSchema,
+    body: &mut serde_json::Map<String, serde_json::Value>,
+) -> Result<(), Refusal> {
+    for (field, allowed) in &schema.enums {
+        let Some(current) = body.get(field) else {
+            continue;
+        };
+        // Only scalars have a spelling. An array or object under an enumerated
+        // key means our model of this endpoint is wrong in a way a string
+        // rewrite would paper over.
+        let Some(as_text) = scalar_text(current) else {
+            continue;
+        };
+        match schema.coerce(field, &as_text) {
+            // Always write the enum's own member back, so `4` becomes the
+            // string `"4"` even when the text already matched: the type is
+            // half the contract.
+            Some(fixed) => {
+                body.insert(field.clone(), serde_json::Value::String(fixed));
+            }
+            None => {
+                return Err(Refusal {
+                    field: field.clone(),
+                    offered: allowed.clone(),
+                    sent: as_text,
+                })
+            }
+        }
+    }
+    Ok(())
+}
+
+/// A scalar as the text an enum would spell it with.
+///
+/// `4.0` is the number a JSON settings object carries for a whole-second
+/// duration, and `"4.0"` matches no enum anywhere — so a float that is exactly
+/// an integer is written as one.
+fn scalar_text(v: &serde_json::Value) -> Option<String> {
+    match v {
+        serde_json::Value::String(s) => Some(s.clone()),
+        serde_json::Value::Bool(b) => Some(b.to_string()),
+        serde_json::Value::Number(n) => Some(match n.as_f64() {
+            Some(f) if f.fract() == 0.0 && f.is_finite() => format!("{}", f as i64),
+            _ => n.to_string(),
+        }),
+        _ => None,
+    }
+}
+
 fn cache() -> &'static Mutex<BTreeMap<String, Option<EndpointSchema>>> {
     static CACHE: OnceLock<Mutex<BTreeMap<String, Option<EndpointSchema>>>> = OnceLock::new();
     CACHE.get_or_init(|| Mutex::new(BTreeMap::new()))
@@ -374,5 +463,102 @@ mod tests {
         // on every single generation.
         preload("test/negative", None);
         assert_eq!(for_endpoint("test/negative"), None);
+    }
+
+    /// Build a schema that enumerates one field, the way fal publishes it.
+    fn enumerated(field: &str, values: &[&str]) -> EndpointSchema {
+        EndpointSchema {
+            accepted: [field.to_string(), "prompt".to_string()]
+                .into_iter()
+                .collect(),
+            required: Default::default(),
+            enums: [(
+                field.to_string(),
+                values.iter().map(|s| s.to_string()).collect(),
+            )]
+            .into_iter()
+            .collect(),
+        }
+    }
+
+    #[test]
+    fn a_numeric_duration_becomes_the_string_the_endpoint_enumerates() {
+        // The live 422, exactly: Seedance 2.0 Mini declares duration as a
+        // string enum, the settings object carries the number 4.0, and fal
+        // answers `Input should be 'auto', '4', … or '15'` with `"input": 4.0`.
+        let schema = enumerated("duration", &["auto", "4", "5", "6", "8", "10"]);
+        let mut body = serde_json::Map::new();
+        body.insert("duration".into(), serde_json::json!(4.0));
+
+        reconcile(&schema, &mut body).expect("4 seconds is on offer");
+        assert_eq!(body["duration"], serde_json::json!("4"));
+    }
+
+    #[test]
+    fn an_integer_duration_is_also_retyped() {
+        let schema = enumerated("duration", &["4", "8"]);
+        let mut body = serde_json::Map::new();
+        body.insert("duration".into(), serde_json::json!(8));
+        reconcile(&schema, &mut body).unwrap();
+        assert_eq!(body["duration"], serde_json::json!("8"));
+    }
+
+    #[test]
+    fn the_unit_suffix_is_still_reconciled_through_the_body() {
+        // Veo spells the same duration `8s`. Coercion already knew this; what
+        // was missing was anything calling it on the outgoing request.
+        let schema = enumerated("duration", &["4s", "6s", "8s"]);
+        let mut body = serde_json::Map::new();
+        body.insert("duration".into(), serde_json::json!(8));
+        reconcile(&schema, &mut body).unwrap();
+        assert_eq!(body["duration"], serde_json::json!("8s"));
+    }
+
+    #[test]
+    fn a_body_value_the_endpoint_does_not_offer_is_refused_not_substituted() {
+        // Quietly rounding 12s down to the nearest offered value would bill the
+        // user for a generation they did not ask for.
+        let schema = enumerated("duration", &["4", "6", "8"]);
+        let mut body = serde_json::Map::new();
+        body.insert("duration".into(), serde_json::json!(12));
+
+        let err = reconcile(&schema, &mut body).expect_err("12 is not on offer");
+        assert_eq!(err.sent, "12");
+        let msg = err.to_string();
+        assert!(msg.contains("duration"), "{msg}");
+        assert!(msg.contains('4') && msg.contains('8'), "{msg}");
+    }
+
+    #[test]
+    fn a_field_with_no_published_enum_is_left_exactly_as_built() {
+        // This must not become a general coercion layer: an unenumerated field
+        // is one we know nothing about, and rewriting it would be a guess.
+        let schema = enumerated("duration", &["4"]);
+        let mut body = serde_json::Map::new();
+        body.insert("duration".into(), serde_json::json!(4));
+        body.insert("seed".into(), serde_json::json!(1234));
+        body.insert("guidance".into(), serde_json::json!(6.5));
+
+        reconcile(&schema, &mut body).unwrap();
+        assert_eq!(body["seed"], serde_json::json!(1234));
+        assert_eq!(body["guidance"], serde_json::json!(6.5));
+    }
+
+    #[test]
+    fn an_absent_field_is_not_invented() {
+        let schema = enumerated("duration", &["4"]);
+        let mut body = serde_json::Map::new();
+        body.insert("prompt".into(), serde_json::json!("a red door"));
+        reconcile(&schema, &mut body).unwrap();
+        assert!(!body.contains_key("duration"));
+    }
+
+    #[test]
+    fn resolution_case_is_reconciled_the_same_way() {
+        let schema = enumerated("resolution", &["720p", "1K", "4K"]);
+        let mut body = serde_json::Map::new();
+        body.insert("resolution".into(), serde_json::json!("1k"));
+        reconcile(&schema, &mut body).unwrap();
+        assert_eq!(body["resolution"], serde_json::json!("1K"));
     }
 }
