@@ -63,8 +63,11 @@ jobs:
         include:
           - os: macos-latest
             target: aarch64-apple-darwin
+            # `app` is a macOS bundle type and is rejected outright elsewhere.
+            bundles: app
           - os: windows-latest
             target: x86_64-pc-windows-msvc
+            bundles: nsis
     steps:
       - uses: actions/checkout@v5
 
@@ -118,9 +121,14 @@ jobs:
       - name: Clippy (shell)
         run: cargo clippy -p halation-tauri --all-targets --target ${{ matrix.target }} -- -D warnings
 
+      # From the repo root, not from ui/. The Tauri CLI finds its project by
+      # walking *down* for tauri.conf.json, and src-tauri is a sibling of ui —
+      # so running it there fails with "Couldn't recognize the current folder
+      # as a Tauri project" before it compiles a line. scripts/build-macos.sh
+      # has always done it this way; CI had not.
       - name: Bundle
-        working-directory: ui
-        run: pnpm exec tauri build --target ${{ matrix.target }} --bundles app
+        shell: bash
+        run: ui/node_modules/.bin/tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
         env:
           # Unsigned in CI on purpose. With APPLE_SIGNING_IDENTITY unset Tauri
           # skips signing entirely, which is what we want here — release signing
