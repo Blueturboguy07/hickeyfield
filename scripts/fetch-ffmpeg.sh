@@ -225,7 +225,19 @@ fetch_one() {
 
   rm -rf "$CACHE/x-$target"
   mkdir -p "$CACHE/x-$target"
-  unzip -q -o "$archive" "$MEMBER" -d "$CACHE/x-$target"
+  # `unzip` where it exists, bsdtar otherwise. Git Bash — the only bash a
+  # Windows reader is likely to have — ships no unzip, so this script could
+  # never fetch its own Windows sidecar on Windows. Both macOS and Windows 10+
+  # ship bsdtar as `tar`, and it reads zip archives and single members happily.
+  if command -v unzip >/dev/null 2>&1; then
+    unzip -q -o "$archive" "$MEMBER" -d "$CACHE/x-$target"
+  elif tar --version 2>/dev/null | grep -qi bsdtar; then
+    mkdir -p "$CACHE/x-$target"
+    tar -xf "$archive" -C "$CACHE/x-$target" "$MEMBER"
+  else
+    echo "  FAIL  need unzip or bsdtar to unpack $archive" >&2
+    exit 1
+  fi
   cp "$CACHE/x-$target/$MEMBER" "$out"
   chmod +x "$out"
 
