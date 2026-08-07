@@ -69,7 +69,7 @@ export function Settings({
           <div className="setup-block-head">
             <h3 className="setup-heading">Provider keys</h3>
             <p className="setup-sub">
-              Stored in the OS keychain. Halation can tell you whether a key is
+              Stored in the OS keychain. Hickeyfield can tell you whether a key is
               present and whether it works — it cannot show you the key itself,
               and neither can anything else in the app.
             </p>

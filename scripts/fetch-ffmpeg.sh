@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Fetches the static FFmpeg sidecars Halation bundles, one per target triple,
+# Fetches the static FFmpeg sidecars Hickeyfield bundles, one per target triple,
 # into src-tauri/binaries/ with the names Tauri's `externalBin` resolver wants.
 #
 # Why a script and not a committed binary: a 50-100 MB per-platform blob in git
@@ -12,7 +12,7 @@
 # ## The licence gate is the point of this script
 #
 # Default FFmpeg is LGPL-2.1+. `--enable-gpl` (needed for libx264) makes it
-# GPL-2.0+, which is compatible with Halation's AGPL-3.0-or-later: FFmpeg's "or
+# GPL-2.0+, which is compatible with Hickeyfield's AGPL-3.0-or-later: FFmpeg's "or
 # later" reaches GPL-3, and AGPL-3 §13 permits the combination explicitly.
 #
 # `--enable-nonfree` makes a build **legally unredistributable**. Such a binary
@@ -46,7 +46,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 REPO_ROOT="$PWD"
 DEST="$REPO_ROOT/src-tauri/binaries"
-CACHE="${HALATION_FFMPEG_CACHE:-${TMPDIR:-/tmp}/halation-ffmpeg-cache}"
+CACHE="${hickeyfield_FFMPEG_CACHE:-${TMPDIR:-/tmp}/hickeyfield-ffmpeg-cache}"
 
 # --------------------------------------------------------------------------
 # Sources. One row per target triple:
@@ -172,7 +172,7 @@ assert_usable() {
   esac
 
   # Only meaningful when the binary can actually run here; `ffmpeg -L` is what
-  # halation_core::ffmpeg::licence_check asserts at runtime and in CI.
+  # hickeyfield_core::ffmpeg::licence_check asserts at runtime and in CI.
   if [ -x "$bin" ] && "$bin" -hide_banner -L >/dev/null 2>&1; then
     local lic
     lic="$("$bin" -hide_banner -L)"
@@ -217,8 +217,8 @@ fetch_one() {
     echo "        BtbN rebuilds its rolling 'latest' tag, so this is expected" >&2
     echo "        occasionally — but re-pin deliberately: read the new configure" >&2
     echo "        line, then run --update-checksums. Never auto-accept." >&2
-    if [ "${HALATION_ALLOW_REPIN:-0}" != "1" ]; then
-      echo "        Set HALATION_ALLOW_REPIN=1 to proceed once you have reviewed it." >&2
+    if [ "${hickeyfield_ALLOW_REPIN:-0}" != "1" ]; then
+      echo "        Set hickeyfield_ALLOW_REPIN=1 to proceed once you have reviewed it." >&2
       exit 1
     fi
   fi
@@ -244,7 +244,7 @@ fetch_one() {
   got="$(sha256_of "$out")"
   if [ -n "$BINARY_SHA" ] && [ "$got" != "$BINARY_SHA" ]; then
     echo "  WARN  binary sha256 mismatch: expected $BINARY_SHA, got $got" >&2
-    [ "${HALATION_ALLOW_REPIN:-0}" = "1" ] || exit 1
+    [ "${hickeyfield_ALLOW_REPIN:-0}" = "1" ] || exit 1
   fi
   echo "  sha   $got  (as published)"
 
@@ -301,11 +301,11 @@ FFmpeg — GNU General Public License
   The two builds are not under the same version of the GPL, which the entries
   below state per target: --enable-gpl alone gives GPL-2.0-or-later, while
   --enable-gpl --enable-version3 gives GPL-3.0-or-later. Both are compatible
-  with Halation's AGPL-3.0-or-later, and both licence texts must ship.
+  with Hickeyfield's AGPL-3.0-or-later, and both licence texts must ship.
 
-  Halation bundles an unmodified static FFmpeg binary per platform, fetched by
+  Hickeyfield bundles an unmodified static FFmpeg binary per platform, fetched by
   scripts/fetch-ffmpeg.sh. It is dynamically invoked as a separate process and
-  is not linked into Halation.
+  is not linked into Hickeyfield.
 
   Written offer: the complete corresponding source for the FFmpeg builds below,
   including the configure invocation, is available for three years from the

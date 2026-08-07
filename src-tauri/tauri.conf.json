@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Halation",
+  "productName": "Hickeyfield",
   "version": "0.1.0",
-  "identifier": "ai.halation.studio",
+  "identifier": "ai.hickeyfield.studio",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
@@ -14,7 +14,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Halation",
+        "title": "Hickeyfield",
         "width": 1440,
         "height": 900,
         "minWidth": 1040,
@@ -49,8 +49,8 @@
     ],
     "category": "Graphics and Design",
     "shortDescription": "Open-source AI video and image studio",
-    "longDescription": "Halation is a free, open-source desktop studio for AI video and image generation. Bring your own API keys and pay providers directly at cost.",
-    "copyright": "Copyright (c) 2026 Halation contributors. AGPL-3.0-or-later.",
+    "longDescription": "Hickeyfield is a free, open-source desktop studio for AI video and image generation. Bring your own API keys and pay providers directly at cost.",
+    "copyright": "Copyright (c) 2026 Hickeyfield contributors. AGPL-3.0-or-later.",
     "macOS": {
       "minimumSystemVersion": "13.0",
       "entitlements": "Entitlements.plist"

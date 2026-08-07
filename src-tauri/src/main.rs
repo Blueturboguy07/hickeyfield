@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    halation_tauri_lib::run()
+    hickeyfield_tauri_lib::run()
 }

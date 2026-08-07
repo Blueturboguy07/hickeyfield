@@ -136,7 +136,7 @@ Prompt: an amazing beautiful epic photo of a lighthouse in a storm, ultra realis
 > light, the lamp a small warm point against it. Salt-stained granite, empty shoreline.
 
 ```
-===HALATION-NOTES===
+===HICKEYFIELD-NOTES===
 B7: dropped "ultra realistic, 8k, best quality" — style tokens.
 B12: "no people" cannot be subtracted; wrote the shoreline as empty instead.
 I5: added the material of the tower and the state of the stone, which is what makes it read as photographed.
@@ -155,7 +155,7 @@ Prompt: a boy running through a sprinkler on a suburban lawn, camera dollies in 
 > him and lights the spray into a bright arc. Suburban fence and hedge soft in the background.
 
 ```
-===HALATION-NOTES===
+===HICKEYFIELD-NOTES===
 I1: converted the running into the frozen evidence of it — mid-stride, arms back, water on the face.
 I2: "dollies in on his face" has no travel in a still; translated to a close shot.
 ```
@@ -190,7 +190,7 @@ Prompt: like this but a fox
 > thirds, plain background above.
 
 ```
-===HALATION-NOTES===
+===HICKEYFIELD-NOTES===
 I11: named what the reference controls — style only. An unqualified reference is blended wholesale, background included.
 I12: said explicitly that composition and subject are not taken from it, which is what stops the copy.
 ```
@@ -212,7 +212,7 @@ Prompt: a cosy independent bookshop front at night with a hand painted sign sayi
 > lettering. Stacked books visible through the glass, a bicycle against the kerb.
 
 ```
-===HALATION-NOTES===
+===HICKEYFIELD-NOTES===
 I7: shortened the sign text to the first two words. Current image models degrade sharply past a few words, and the full line would have rendered as scrambled lettering across the whole shopfront. The remaining wording is unchanged.
 ```
 

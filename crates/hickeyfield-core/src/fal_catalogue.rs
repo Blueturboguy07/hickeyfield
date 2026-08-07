@@ -26,7 +26,7 @@
 //! remainder is refused rather than approximated.
 //!
 //! It is also not a route table. An id here is a fal endpoint, not proof that
-//! Halation can drive it: that still comes from [`crate::registry`] and
+//! Hickeyfield can drive it: that still comes from [`crate::registry`] and
 //! [`crate::route`].
 //!
 //! # Offline first
@@ -40,9 +40,9 @@
 //! # Refreshing the snapshot
 //!
 //! ```sh
-//! cargo run -p halation-core --example dump_fal_catalogue > \
-//!   crates/halation-core/vendor/fal-catalogue-snapshot.json
-//! cargo test -p halation-core fal_catalogue
+//! cargo run -p hickeyfield-core --example dump_fal_catalogue > \
+//!   crates/hickeyfield-core/vendor/fal-catalogue-snapshot.json
+//! cargo test -p hickeyfield-core fal_catalogue
 //! ```
 //!
 //! The tests assert on the counts measured at capture time, so a refresh that

@@ -1,6 +1,6 @@
 //! What the live price feeds actually price, right now.
 //!
-//! Run: `cargo run -p halation-core --example price_check`
+//! Run: `cargo run -p hickeyfield-core --example price_check`
 //!
 //! The question this answers is not "does the fetcher compile" but "how many
 //! of the routes a user can pick come back with a real number, and how many
@@ -8,9 +8,9 @@
 //! point of wiring the feed in; a fetch that succeeds and prices four routes
 //! would be a fetch that changed nothing.
 
-use halation_core::cost::Billable;
-use halation_core::prices::PriceFeed;
-use halation_core::registry::registry;
+use hickeyfield_core::cost::Billable;
+use hickeyfield_core::prices::PriceFeed;
+use hickeyfield_core::registry::registry;
 
 fn main() {
     // A *complete* request. A per-second-tiered model cannot be priced without

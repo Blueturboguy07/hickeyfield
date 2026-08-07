@@ -10,9 +10,9 @@ use crate::pricing::Prices;
 use crate::runner::{ClientFactory, OnUpdate, Runner};
 use crate::store::SqliteStore;
 use crate::vault;
-use halation_core::clients::{FalClient, HiggsfieldClient};
-use halation_core::engine::{JobSet, JobStore, ProviderClient};
-use halation_core::ProviderId;
+use hickeyfield_core::clients::{FalClient, HiggsfieldClient};
+use hickeyfield_core::engine::{JobSet, JobStore, ProviderClient};
+use hickeyfield_core::ProviderId;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Manager};
@@ -61,26 +61,26 @@ fn client_for(route_id: &str) -> Option<Arc<dyn ProviderClient>> {
 /// URL, which is exactly what the providers that only accept URLs need — Kling
 /// and Alibaba among them. So a single fal key makes media work everywhere,
 /// which is worth saying plainly in the error when there isn't one.
-fn uploader_for(route_id: &str) -> Option<Arc<dyn halation_core::Uploader>> {
+fn uploader_for(route_id: &str) -> Option<Arc<dyn hickeyfield_core::Uploader>> {
     let own = route_id
         .split(':')
         .next()
         .and_then(ProviderId::from_slug)
         .and_then(|p| match p {
             ProviderId::Fal => vault::get(p, false)
-                .map(|k| Arc::new(FalClient::new(k)) as Arc<dyn halation_core::Uploader>),
+                .map(|k| Arc::new(FalClient::new(k)) as Arc<dyn hickeyfield_core::Uploader>),
             ProviderId::Higgsfield => {
                 let key = vault::get(p, false)?;
                 let secret = vault::get(p, true)?;
                 Some(Arc::new(HiggsfieldClient::new(key, secret))
-                    as Arc<dyn halation_core::Uploader>)
+                    as Arc<dyn hickeyfield_core::Uploader>)
             }
             _ => None,
         });
 
     own.or_else(|| {
         vault::get(ProviderId::Fal, false)
-            .map(|k| Arc::new(FalClient::new(k)) as Arc<dyn halation_core::Uploader>)
+            .map(|k| Arc::new(FalClient::new(k)) as Arc<dyn hickeyfield_core::Uploader>)
     })
 }
 
@@ -101,7 +101,7 @@ pub fn db_path(app: &AppHandle) -> PathBuf {
     app.path()
         .app_data_dir()
         .unwrap_or_else(|_| PathBuf::from("."))
-        .join("halation.sqlite")
+        .join("hickeyfield.sqlite")
 }
 
 impl AppState {
@@ -161,15 +161,15 @@ impl AppState {
 /// CLI documents is a flag we send — no per-model translation table to drift.
 pub fn submit_to_provider(
     job: &mut JobSet,
-    model: &halation_core::Model,
-    route: &halation_core::Route,
-    media: &[halation_core::MediaRef],
+    model: &hickeyfield_core::Model,
+    route: &hickeyfield_core::Route,
+    media: &[hickeyfield_core::MediaRef],
     // The harness output — camera clause appended, rewritten if it was asked
     // for. `job.prompt` deliberately still holds the user's own words, so the
     // UI can show both and the recipe records what was actually sent.
     wire_prompt: &str,
-) -> Result<String, halation_core::engine::JobError> {
-    use halation_core::engine::JobError;
+) -> Result<String, hickeyfield_core::engine::JobError> {
+    use hickeyfield_core::engine::JobError;
 
     let client = client_for(&route.id()).ok_or_else(|| {
         JobError::Permanent(format!(
@@ -182,15 +182,15 @@ pub fn submit_to_provider(
     // Higgsfield's CLI, so it is only correct when we are actually talking to
     // Higgsfield; everything routed through fal needs fal's names.
     let dialect = match route.provider {
-        ProviderId::Higgsfield => halation_core::media::Dialect::Catalog,
-        _ => halation_core::media::Dialect::Fal,
+        ProviderId::Higgsfield => hickeyfield_core::media::Dialect::Catalog,
+        _ => hickeyfield_core::media::Dialect::Fal,
     };
 
     // Bind before uploading. Attaching an audio file to a model that cannot
     // take one is a mistake worth catching in milliseconds, not after pushing
     // the bytes to a CDN.
     if !media.is_empty() {
-        halation_core::media::bind(
+        hickeyfield_core::media::bind(
             &model.spec,
             &model.display_name,
             media,
@@ -205,15 +205,15 @@ pub fn submit_to_provider(
     } else {
         let uploader = uploader_for(&route.id()).ok_or_else(|| {
             JobError::Permanent(format!(
-                "{} cannot host uploaded files — add a fal key, which Halation will use to upload media for any provider",
+                "{} cannot host uploaded files — add a fal key, which Hickeyfield will use to upload media for any provider",
                 route.provider.display_name()
             ))
         })?;
-        halation_core::media::resolve(media, uploader.as_ref()).map_err(JobError::Permanent)?
+        hickeyfield_core::media::resolve(media, uploader.as_ref()).map_err(JobError::Permanent)?
     };
 
     let mut body = serde_json::Map::new();
-    for (k, v) in halation_core::media::bind(
+    for (k, v) in hickeyfield_core::media::bind(
         &model.spec,
         &model.display_name,
         &resolved,
@@ -272,10 +272,10 @@ pub fn submit_to_provider(
     // registry stores only the family root, so the bare slug 404s for 17 of 36
     // routes. Deduce the mode from what the user actually attached.
     let endpoint = if route.provider == ProviderId::Fal {
-        halation_core::media::resolve_endpoint(
+        hickeyfield_core::media::resolve_endpoint(
             &route.slug,
-            halation_core::media::InputMode::of(media),
-            model.modality == halation_core::Modality::Video,
+            hickeyfield_core::media::InputMode::of(media),
+            model.modality == hickeyfield_core::Modality::Video,
         )
         // Refused here rather than at the provider: we already know which modes
         // the route serves, and a 404 after a round trip tells the user nothing
@@ -298,7 +298,7 @@ pub fn submit_to_provider(
     // unrelated text-to-video generation, billed in full, because fal ignored
     // the field it did not recognise.
     let fal_schema = if route.provider == ProviderId::Fal {
-        halation_core::fal_schema::for_endpoint(&endpoint)
+        hickeyfield_core::fal_schema::for_endpoint(&endpoint)
     } else {
         None
     };
@@ -311,7 +311,7 @@ pub fn submit_to_provider(
     // by looking at the result. `AspectPlan` collapses that to one decision,
     // made here, which both the wire and the job record then report.
     {
-        use halation_core::aspect::AspectPlan;
+        use hickeyfield_core::aspect::AspectPlan;
 
         // The endpoint's own answer where we have it, the model's spec where we
         // do not. Same question, two sources of truth about two different APIs.
@@ -406,7 +406,7 @@ pub fn submit_to_provider(
             // Then make what remains speak the endpoint's own spelling and
             // type. Without this the settings object's `duration: 4.0` reaches
             // an endpoint that enumerates `'4'` as a string and 422s.
-            halation_core::fal_schema::reconcile(schema, &mut body)
+            hickeyfield_core::fal_schema::reconcile(schema, &mut body)
                 .map_err(|r| JobError::Permanent(format!("{} — {r}", model.display_name)))?;
 
             if !ignored_settings.is_empty() {
@@ -510,13 +510,13 @@ mod tests {
         // Three separate channels on purpose. Folding one into another puts it
         // under the wrong heading in the UI, which is its own small way of
         // telling the user something untrue.
-        let j = halation_core::engine::JobSet {
+        let j = hickeyfield_core::engine::JobSet {
             id: "x".into(),
             model_id: "m".into(),
             route_id: "fal:x".into(),
             request_id: String::new(),
             endpoint: String::new(),
-            status: halation_core::JobStatus::Completed,
+            status: hickeyfield_core::JobStatus::Completed,
             prompt: "p".into(),
             enhanced_prompt: None,
             enhancer_version: None,
@@ -539,7 +539,7 @@ mod tests {
 
     #[test]
     fn the_ui_setting_names_reach_the_models_own_flag_names() {
-        let reg = halation_core::registry::registry();
+        let reg = hickeyfield_core::registry::registry();
         let with_audio: Vec<_> = reg
             .values()
             .filter(|m| m.spec.flag("generate_audio").is_some())

@@ -6,9 +6,9 @@
 //! UI can ask whether a key is set and gets a bool; only this process reads the
 //! value, and only at request-assembly time.
 
-use halation_core::ProviderId;
+use hickeyfield_core::ProviderId;
 
-const SERVICE: &str = "ai.halation.keys";
+const SERVICE: &str = "ai.hickeyfield.keys";
 
 /// Suffix for the second half of a key/secret pair (Higgsfield only).
 const SECRET_SUFFIX: &str = ".secret";
@@ -21,11 +21,11 @@ fn account(provider: ProviderId, secret_half: bool) -> String {
     }
 }
 
-/// Dev-only override, e.g. `HALATION_FAL_KEY`. Checked before the keychain so a
+/// Dev-only override, e.g. `hickeyfield_FAL_KEY`. Checked before the keychain so a
 /// contributor can run without touching their login keychain at all.
 fn env_override(provider: ProviderId, secret_half: bool) -> Option<String> {
     let var = format!(
-        "HALATION_{}_{}",
+        "hickeyfield_{}_{}",
         provider.slug().to_uppercase().replace('-', "_"),
         if secret_half { "SECRET" } else { "KEY" }
     );
@@ -120,15 +120,15 @@ mod tests {
     #[test]
     fn env_override_is_read_and_trimmed() {
         // Scoped to a provider unlikely to be set in a real environment.
-        std::env::set_var("HALATION_RECRAFT_KEY", "  abc123  ");
+        std::env::set_var("hickeyfield_RECRAFT_KEY", "  abc123  ");
         assert_eq!(get(ProviderId::Recraft, false).as_deref(), Some("abc123"));
-        std::env::remove_var("HALATION_RECRAFT_KEY");
+        std::env::remove_var("hickeyfield_RECRAFT_KEY");
     }
 
     #[test]
     fn blank_env_override_is_ignored() {
-        std::env::set_var("HALATION_BFL_KEY", "   ");
+        std::env::set_var("hickeyfield_BFL_KEY", "   ");
         assert_eq!(env_override(ProviderId::Bfl, false), None);
-        std::env::remove_var("HALATION_BFL_KEY");
+        std::env::remove_var("hickeyfield_BFL_KEY");
     }
 }

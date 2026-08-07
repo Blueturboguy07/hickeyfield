@@ -68,7 +68,7 @@ export function BulkImport({
       <div className="setup-block-head">
         <h3 className="setup-heading">Paste your keys</h3>
         <p className="setup-sub">
-          Drop in .env-style lines and Halation stores every provider it
+          Drop in .env-style lines and Hickeyfield stores every provider it
           recognises. Comments, <code>export</code> prefixes and quotes are all
           fine.
         </p>

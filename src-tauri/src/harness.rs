@@ -23,12 +23,12 @@
 //!    forbids it unconditionally.
 //! 4. Recompile after the rewrite, so the camera clause survives verbatim.
 
-use halation_core::enhance::{self, EnhanceInputs, PresetSelection, PromptParts};
-use halation_core::enhancer::{
+use hickeyfield_core::enhance::{self, EnhanceInputs, PresetSelection, PromptParts};
+use hickeyfield_core::enhancer::{
     enhance_or_original, mode_for, recipe_pin, EnhanceRequest, LocalEnhancer, RewriteStatus,
     Rewritten,
 };
-use halation_core::{corpus, MediaRef, Model};
+use hickeyfield_core::{corpus, MediaRef, Model};
 
 /// What the harness produced, and how.
 pub struct Compiled {
@@ -64,7 +64,7 @@ pub fn compile(
     rewriter: Rewriter<'_>,
 ) -> Result<Compiled, String> {
     // 1. The preset, resolved to a real family rather than an opaque id.
-    let family = preset_id.and_then(halation_core::preset::get);
+    let family = preset_id.and_then(hickeyfield_core::preset::get);
 
     // 2. The camera clause. `with_camera` takes the slug and looks up the
     //    five-slot template, so the grammar stays in one place.
@@ -82,7 +82,7 @@ pub fn compile(
         &parts,
         EnhanceInputs::new(model.job_type)
             .with_preset(PresetSelection::from_family(family))
-            .with_end_frame(halation_core::media::has_end_frame(media))
+            .with_end_frame(hickeyfield_core::media::has_end_frame(media))
             .with_toggle(enhance_toggle),
         None,
     );
@@ -179,10 +179,10 @@ pub fn compile(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use halation_core::{MediaRole, ProviderId};
+    use hickeyfield_core::{MediaRole, ProviderId};
 
     fn model(id: &str) -> Model {
-        halation_core::registry::registry()
+        hickeyfield_core::registry::registry()
             .remove(id)
             .unwrap_or_else(|| panic!("{id} missing from the registry"))
     }
@@ -193,7 +193,7 @@ mod tests {
         // change the stored id and nothing else, so the provider received the
         // raw prompt with no camera clause.
         let m = model("kling3_0");
-        let slug = halation_core::camera::slugs().next().unwrap();
+        let slug = hickeyfield_core::camera::slugs().next().unwrap();
         let out = compile(
             &m,
             "a lighthouse in fog",
@@ -215,7 +215,7 @@ mod tests {
         // Rule 2 beats rule 1. Interpolating between two fixed frames must not
         // have its prompt rewritten — the result would match neither frame.
         let m = model("kling3_0");
-        let slug = halation_core::camera::slugs().next().unwrap();
+        let slug = hickeyfield_core::camera::slugs().next().unwrap();
         let media = [
             MediaRef::url(MediaRole::Start, "https://a/1.png"),
             MediaRef::url(MediaRole::End, "https://a/2.png"),
@@ -283,7 +283,7 @@ mod tests {
             Rewriter::None,
         )
         .unwrap();
-        let tmpl = halation_core::camera::get("push-in").unwrap().render();
+        let tmpl = hickeyfield_core::camera::get("push-in").unwrap().render();
         assert!(
             out.prompt.contains(&tmpl),
             "expected the rendered template verbatim.\n  got: {}\n want: {tmpl}",
@@ -311,7 +311,7 @@ mod tests {
     fn every_launch_model_compiles_without_panicking() {
         // job_type, preset lookup and mode selection all index by model; a gap
         // in any of them would panic on a model a new user is shown first.
-        for m in halation_core::registry::launch_models() {
+        for m in hickeyfield_core::registry::launch_models() {
             let out = compile(&m, "a test", None, &[], false, Rewriter::None);
             assert!(out.is_ok(), "{} failed to compile a prompt", m.id);
         }

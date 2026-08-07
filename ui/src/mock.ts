@@ -484,7 +484,7 @@ export const MOCK_JOBS: JobSet[] = [
         name: "intersection.png",
       },
     ],
-    enhancerVersion: "halation-enhance-1.2",
+    enhancerVersion: "hickeyfield-enhance-1.2",
   },
   {
     id: "job-2",
@@ -518,7 +518,7 @@ export const MOCK_JOBS: JobSet[] = [
       steps: 20,
     },
     media: [],
-    enhancerVersion: "halation-enhance-1.2",
+    enhancerVersion: "hickeyfield-enhance-1.2",
   },
   {
     id: "job-1",
@@ -611,7 +611,7 @@ export function mockSubmit(input: SubmitInput): string {
     presetName: preset?.displayName ?? null,
     settings: { ...input.settings, seed: Math.floor(Math.random() * 999999) },
     media: input.media,
-    enhancerVersion: input.settings.enhance ? "halation-enhance-1.2" : null,
+    enhancerVersion: input.settings.enhance ? "hickeyfield-enhance-1.2" : null,
   };
   emit(base);
 

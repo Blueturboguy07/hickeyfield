@@ -480,9 +480,10 @@
   font-weight: 700;
   letter-spacing: var(--tracking-tight);
   cursor: pointer;
-  /* The product is named after the bloom around a bright highlight. This is
-   * the one surface that earns it. */
-  box-shadow: var(--halation-bloom);
+  /* The one deliberate divergence from the flat treatment being cloned: a real
+   * bloom around the primary action, the way a bright highlight blooms on film
+   * stock. One surface earns it; putting it on more would make it wallpaper. */
+  box-shadow: var(--hickeyfield-bloom);
   transition:
     background-color var(--dur-normal) var(--ease-out),
     box-shadow var(--dur-normal) var(--ease-out);

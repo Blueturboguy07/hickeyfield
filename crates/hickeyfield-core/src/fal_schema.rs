@@ -268,7 +268,7 @@ fn fetch(endpoint: &str) -> Option<EndpointSchema> {
     // generation. Missing the schema costs correctness we already lacked.
     let client = reqwest::blocking::Client::builder()
         .timeout(Duration::from_secs(8))
-        .user_agent(concat!("halation/", env!("CARGO_PKG_VERSION")))
+        .user_agent(concat!("hickeyfield/", env!("CARGO_PKG_VERSION")))
         .build()
         .ok()?;
 

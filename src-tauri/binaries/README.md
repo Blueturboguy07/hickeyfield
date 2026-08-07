@@ -1,6 +1,6 @@
 # Bundled sidecars
 
-This directory holds the static FFmpeg binaries Halation ships. **Nothing here
+This directory holds the static FFmpeg binaries Hickeyfield ships. **Nothing here
 is committed** — `.gitignore` excludes `src-tauri/binaries/*` apart from
 `.gitkeep` and this file. Run the fetch script instead:
 
@@ -25,7 +25,7 @@ named `ffmpeg-<triple>`, with `.exe` on Windows:
 
 Get the suffix wrong and `tauri build` fails with "binary not found" while the
 file is plainly sitting right there. Inside the finished bundle Tauri renames it
-to plain `ffmpeg`, which is why `halation_core::ffmpeg::locate` accepts both
+to plain `ffmpeg`, which is why `hickeyfield_core::ffmpeg::locate` accepts both
 spellings — checking only one works in dev and breaks in the shipped app.
 
 ## Static only
@@ -39,7 +39,7 @@ Confirm with `otool -L` (macOS) — only system frameworks should appear.
 
 ## Licence: the one thing to get right
 
-Halation is AGPL-3.0-or-later. We ship a **GPL** FFmpeg, which is compatible:
+Hickeyfield is AGPL-3.0-or-later. We ship a **GPL** FFmpeg, which is compatible:
 FFmpeg's "or later" reaches GPL-3, and AGPL-3 §13 permits the combination
 explicitly. `--enable-gpl` is required anyway, because libx264 is our software
 encoder.
@@ -59,7 +59,7 @@ actually in the bundle.
 behaves exactly like a legal one, so the only defence is to ask:
 
 * `scripts/fetch-ffmpeg.sh` refuses to install such a build.
-* `halation_core::ffmpeg::licence_check` asserts it at runtime and in CI, per
+* `hickeyfield_core::ffmpeg::licence_check` asserts it at runtime and in CI, per
   the M3 exit criterion.
 
 Never ship libfdk-aac. Several popular Windows "full" builds include it, which
@@ -139,6 +139,6 @@ To run the compositor's real-ffmpeg tests against a bundled sidecar rather than
 whatever is on `PATH`:
 
 ```sh
-HALATION_FFMPEG=$PWD/src-tauri/binaries/ffmpeg-aarch64-apple-darwin \
-  cargo test -p halation-core --ignored
+hickeyfield_FFMPEG=$PWD/src-tauri/binaries/ffmpeg-aarch64-apple-darwin \
+  cargo test -p hickeyfield-core --ignored
 ```

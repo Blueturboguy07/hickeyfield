@@ -1,7 +1,7 @@
 @import "./fonts/fonts.css";
 
 /*
- * Halation design tokens.
+ * Hickeyfield design tokens.
  *
  * Structure and neutral values follow Higgsfield's shipped token sheet, which
  * is functional UI convention. The brand accent is deliberately ours: their
@@ -17,7 +17,7 @@
   color-scheme: dark only;
 
   /* ── Brand: vermilion ──────────────────────────────────────────────────
-   * Named for halation — the reddish bloom around bright highlights on film.
+   * Named for hickeyfield — the reddish bloom around bright highlights on film.
    *
    * 500 is the one red bright enough to preserve the dark-text-on-bright-accent
    * contrast model (~6.2:1 against --accent-fg). Do not darken it without
@@ -170,7 +170,7 @@
   /* The signature: the product is named after a glow, so accent surfaces
    * actually bloom. This is our one deliberate divergence from Higgsfield's
    * flat treatment. */
-  --halation-bloom: 0 0 24px rgba(255, 74, 28, 0.32);
+  --hickeyfield-bloom: 0 0 24px rgba(255, 74, 28, 0.32);
 
   /* ── Motion ─────────────────────────────────────────────────────────── */
   --dur-fast: 0.1s;

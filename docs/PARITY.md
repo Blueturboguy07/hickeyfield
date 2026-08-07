@@ -1,4 +1,4 @@
-# Parity register — Halation vs Higgsfield
+# Parity register — Hickeyfield vs Higgsfield
 
 **Measured 2026-08-04** against the repo as it stands and against `~/higgsfield-research/`
 (19 reports, the 419-row live motion catalog, the 24,835-string i18n bundle, the 98-app
@@ -29,7 +29,7 @@ Milestone reality against the plan:
 - **M4 Studios** — zero.
 - **M5 Polish/release** — zero. `docs/` was empty until this file.
 
-The honest one-line summary: **Halation is a working single-surface generator. Higgsfield
+The honest one-line summary: **Hickeyfield is a working single-surface generator. Higgsfield
 is forty surfaces.** The remaining work is overwhelmingly content authoring and surface
 building, not core engineering — the hard plumbing (routing, cost, jobs, keychain,
 compositor) is done.
@@ -41,7 +41,7 @@ compositor) is done.
 This is the single biggest line item in the whole project and it is not an engineering
 problem. Higgsfield's moat *is* this content.
 
-| Asset class | Higgsfield | Halation | Gap |
+| Asset class | Higgsfield | Hickeyfield | Gap |
 |---|---|---|---|
 | Motion/VFX presets | **419** (live, re-verified) | 25 | **394** |
 | One-click Apps | **98** (from `/apps/sitemap.xml`) | 0 | **98** |
@@ -77,7 +77,7 @@ Higgsfield's top nav alone is: Explore · Image · Video · Audio · Cinema Stud
 Academy · Supercomputer · Community · Contests · Plugins · Marketing Studio · Canvas ·
 Originals · Shorts Studio · Explainer · Pricing.
 
-Halation mounts **seven components**: SettingsRail, ResultsFeed, MetaRail, PresetPicker,
+Hickeyfield mounts **seven components**: SettingsRail, ResultsFeed, MetaRail, PresetPicker,
 ModelPicker, Onboarding, Settings. That is one surface — the generator.
 
 ### 2a. In scope per the plan, not built
@@ -156,7 +156,7 @@ Previously the largest functional hole: `SubmitInput` carried no media and
 `submit_to_provider` sent only prompt + flags, so image-to-video, start/end
 frame and reference-to-video could not work at all. Now built:
 
-- `crates/halation-core/src/media.rs` — roles (`start`/`end`/`reference`/…) bound
+- `crates/hickeyfield-core/src/media.rs` — roles (`start`/`end`/`reference`/…) bound
   to the wire flags the vendored `MODELS.md` actually declares, with per-role
   fallback (`start_image` → `image`) and a deliberate refusal to fall back for
   `end`, since binding an end frame to `image` produces a generation that
@@ -230,8 +230,8 @@ Roster gaps that remain:
 | ⚖️ **FFmpeg licensing** | The macOS binary is from osxexperts.net, which labels its downloads *"for educational purposes only"* — incompatible with redistribution. **Must** be resolved by building FFmpeg ourselves or sourcing from a vendor with clear redistribution terms. Recorded in `NOTICE`. Blocks any public release. |
 | **macOS notarization** | `build-macos.sh` and `verify-macos.sh` are ported and proven (the verifier correctly *fails* a development-certificate build). Needs a fresh Apple app-specific password — none stored on this machine. |
 | **Windows installer + Store** | Nothing built. Tauri emits no MSIX; needs Microsoft's `winapp` CLI. Store registration is free as of 2026 but the identity check takes time — **start it early, it is the only clean first-install path.** |
-| **Trademark clearance** | USPTO TESS + EUIPO on "Halation", classes 9/42. Not run. |
-| **Domains** | `halationhq.ai` not registered; `halation.ai` Dropzone application not filed. |
+| **Trademark clearance** | USPTO TESS + EUIPO on "Hickeyfield", classes 9/42. Not run. |
+| **Domains** | `hickeyfieldhq.ai` not registered; `hickeyfield.ai` Dropzone application not filed. |
 | **Attorney review** | Plan recommends before M2 ends. Not engaged. Covers trade dress, copy provenance (especially camera templates), BYO-key framing, and exposing Higgsfield's own API as a provider. |
 
 ---

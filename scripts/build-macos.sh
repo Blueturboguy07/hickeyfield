@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Builds Halation for macOS the way it has to be built to be *installable* by
+# Builds Hickeyfield for macOS the way it has to be built to be *installable* by
 # someone who is not the person who built it.
 #
 # The incident this encodes happened on a sibling project: v0.1.0 shipped signed
@@ -34,7 +34,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 REPO_ROOT="$PWD"
-PRODUCT="Halation"
+PRODUCT="Hickeyfield"
 TARGET=""
 SKIP_NOTARIZE=0
 DEFAULT_IDENTITY="Developer ID Application: Mann Bellani (R5R3ZS54LV)"

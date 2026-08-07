@@ -1,6 +1,6 @@
 //! SQLite-backed job persistence.
 //!
-//! Implements `halation_core::engine::JobStore`. The core defines the trait and
+//! Implements `hickeyfield_core::engine::JobStore`. The core defines the trait and
 //! stays database-free so its tests run in milliseconds; the concrete storage
 //! lives here, where it is allowed to be slow and platform-aware.
 //!
@@ -9,7 +9,7 @@
 //! from the web build, which could only have offered it by putting the user's
 //! key on a server.
 
-use halation_core::engine::{JobError, JobSet, JobStore};
+use hickeyfield_core::engine::{JobError, JobSet, JobStore};
 use rusqlite::{params, Connection, OptionalExtension};
 use std::path::Path;
 use std::sync::Mutex;
@@ -175,7 +175,7 @@ fn row_to_job(row: &rusqlite::Row<'_>) -> rusqlite::Result<JobSet> {
         // A status we cannot parse must not drop the row — the job still
         // exists and the user still has a right to see it.
         status: serde_json::from_str(&format!("\"{status}\""))
-            .unwrap_or(halation_core::JobStatus::InProgress),
+            .unwrap_or(hickeyfield_core::JobStatus::InProgress),
         prompt: row.get("prompt")?,
         enhanced_prompt: row.get("enhanced_prompt")?,
         enhancer_version: row.get("enhancer_version").unwrap_or_default(),
@@ -294,8 +294,8 @@ impl JobStore for SqliteStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use halation_core::engine::{Output, OutputKind};
-    use halation_core::JobStatus;
+    use hickeyfield_core::engine::{Output, OutputKind};
+    use hickeyfield_core::JobStatus;
 
     fn job(id: &str, status: JobStatus) -> JobSet {
         JobSet {
@@ -356,7 +356,7 @@ mod tests {
     fn survives_reopening_the_same_file() {
         // The whole point of the store: quit mid-generation, come back, it is
         // still there and still known to be unfinished.
-        let dir = std::env::temp_dir().join(format!("halation-test-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("hickeyfield-test-{}", std::process::id()));
         let path = dir.join("jobs.sqlite");
         let _ = std::fs::remove_dir_all(&dir);
 
@@ -448,7 +448,7 @@ mod tests {
         // Without this, Rerun restored an image-to-video job as text-to-video:
         // a different generation, at the same price, that the user did not ask
         // for.
-        use halation_core::{MediaRef, MediaRole};
+        use hickeyfield_core::{MediaRef, MediaRole};
         let s = SqliteStore::in_memory().unwrap();
         let mut j = job("a", JobStatus::Queued);
         j.media = vec![

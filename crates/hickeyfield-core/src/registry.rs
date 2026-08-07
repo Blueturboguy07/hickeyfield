@@ -149,7 +149,7 @@ fn assemble(mut spec: ModelSpec) -> Model {
 
 /// Higgsfield's CLI spec and Higgsfield's own product disagree on four labels.
 /// The CLI is an internal artifact; the picker is what a user has seen before
-/// they ever open Halation, so the picker wins. Kept as an explicit table rather
+/// they ever open Hickeyfield, so the picker wins. Kept as an explicit table rather
 /// than a string transform, because these are four editorial decisions someone
 /// made — not a pattern — and a fifth will not follow from a rule.
 ///

@@ -127,7 +127,7 @@ Prompt: a chef cooking, he chops vegetables then puts them in the pan then taste
 > rhythm for the length of the shot.
 
 ```
-===HALATION-NOTES===
+===HICKEYFIELD-NOTES===
 V3: three actions were described; kept the chopping. The pan and the tasting each need their own generation.
 B7: dropped "cinematic, 4k".
 ```
@@ -149,7 +149,7 @@ Prompt: drone flying over a forest while zooming in on a cabin and panning right
 > canopy from the left, long shadows between the trunks. Thin woodsmoke drifts from the chimney.
 
 ```
-===HALATION-NOTES===
+===HICKEYFIELD-NOTES===
 V2: three moves were requested (fly, zoom, pan); kept the descent toward the cabin.
 B7: dropped "epic, beautiful" — spent those words on the light direction and the smoke instead.
 ```
@@ -198,7 +198,7 @@ Prompt: a woman doing a backflip off a wall and landing on a motorbike which spe
 > tunnel mouth behind her, exhaust haze in the air.
 
 ```
-===HALATION-NOTES===
+===HICKEYFIELD-NOTES===
 V10: the backflip-and-landing renders unreliably; kept the mount, which does not.
 V3: two actions requested; kept the mount. The ride-away needs its own generation.
 ```
@@ -268,7 +268,7 @@ Prompt: a beautiful blonde woman in a white dress standing in a field of wheat a
 > and the framing stay exactly as they are in the attached start frame.
 
 ```
-===HALATION-NOTES===
+===HICKEYFIELD-NOTES===
 V12: removed the description of the subject and setting — both are already in the attached frame, and restating them makes the model redraw her.
 B7: dropped "cinematic".
 ```
@@ -285,7 +285,7 @@ Prompt: he turns around and walks away down the corridor into the dark
 > exactly as in the attached frame.
 
 ```
-===HALATION-NOTES===
+===HICKEYFIELD-NOTES===
 V14: a full turn and a walk away need the back of the subject and the depth of the corridor, neither of which is in the frame; reduced to the beginning of the turn.
 ```
 
@@ -300,7 +300,7 @@ Prompt: make it night time and add rain, she looks up
 > light and the geometry of the scene stay exactly as in the attached start frame.
 
 ```
-===HALATION-NOTES===
+===HICKEYFIELD-NOTES===
 V15: turning the frame to night and adding rain is a relight, not an animation — that needs an image edit first, or a fresh generation. Animated the look-up only.
 ```
 

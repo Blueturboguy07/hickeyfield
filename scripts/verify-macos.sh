@@ -15,7 +15,7 @@ set -uo pipefail
 
 cd "$(dirname "$0")/.."
 REPO_ROOT="$PWD"
-PRODUCT="Halation"
+PRODUCT="Hickeyfield"
 DMG=""
 APP=""
 REQUIRE_NOTARIZED=0
@@ -71,7 +71,7 @@ else
   fail "hardened runtime is missing — Apple rejects notarization without it"
 fi
 
-# Halation's entitlements file is deliberately EMPTY: a Tauri app is a Rust
+# Hickeyfield's entitlements file is deliberately EMPTY: a Tauri app is a Rust
 # binary plus a system webview, and the web content runs in Apple's own
 # out-of-process service, so it needs no JIT / unsigned-memory / library-
 # validation exceptions. Assert that nothing has crept in — every entitlement

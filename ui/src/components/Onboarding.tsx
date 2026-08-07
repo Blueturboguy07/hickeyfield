@@ -53,12 +53,12 @@ export function Onboarding({
     states.find((s) => s.provider === slug) ?? null;
 
   return (
-    <Overlay open={open} onClose={onClose} title="Set up Halation" variant="full">
+    <Overlay open={open} onClose={onClose} title="Set up Hickeyfield" variant="full">
       <div className="setup">
         <section className="setup-block setup-intro">
           <KeyIcon size={20} className="setup-intro-icon" />
           <p className="setup-intro-text">
-            Halation runs on your own provider keys. There is no Halation
+            Hickeyfield runs on your own provider keys. There is no Hickeyfield
             account, no proxy and no server of ours in the path — every request
             goes straight from this app to the provider you are paying. Keys are
             stored in the operating system keychain, the app reads them only when

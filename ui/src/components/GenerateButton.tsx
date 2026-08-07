@@ -47,7 +47,7 @@ export function GenerateButton({
           <KeyIcon size={16} className="generate-spark" />
         </button>
         <p id="generate-note" className="generate-note">
-          Halation generates with your own keys. Nothing can run until one is
+          Hickeyfield generates with your own keys. Nothing can run until one is
           set.
         </p>
       </div>

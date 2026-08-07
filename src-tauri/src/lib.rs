@@ -15,7 +15,7 @@ use tauri::Manager;
 pub fn run() {
     tracing_subscriber::fmt()
         .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_env("HALATION_LOG")
+            tracing_subscriber::EnvFilter::try_from_env("hickeyfield_LOG")
                 .unwrap_or_else(|_| "info".into()),
         )
         .init();
@@ -87,5 +87,5 @@ pub fn run() {
             commands::library_root,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running Halation");
+        .expect("error while running Hickeyfield");
 }

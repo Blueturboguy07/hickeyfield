@@ -8,7 +8,7 @@
 //! to be a *read* — listing models, fetching an account — so testing a key
 //! never costs the user money and never queues a generation.
 
-use halation_core::ProviderId;
+use hickeyfield_core::ProviderId;
 use serde::Serialize;
 use std::time::Duration;
 
@@ -88,7 +88,7 @@ fn client() -> Option<reqwest::blocking::Client> {
 /// Probe a provider with a cheap authenticated read.
 pub fn validate(provider: ProviderId, key: &str, secret: Option<&str>) -> Validation {
     if provider == ProviderId::Local {
-        let found = halation_core::clients::detect_local();
+        let found = hickeyfield_core::clients::detect_local();
         return match (found.comfyui, found.ollama) {
             (false, false) => {
                 Validation::bad("nothing detected on 127.0.0.1:8188 (ComfyUI) or :11434 (Ollama)")

@@ -129,11 +129,11 @@ function buildLookup(catalog: ProviderInfo[]): Map<string, Target> {
     for (const name of SECRET_ENV_NAMES[p.slug] ?? [])
       put(name, { provider: p.slug, secretHalf: true });
 
-    // The app's own dev overrides, mirroring vault.rs `HALATION_{SLUG}_{HALF}`.
+    // The app's own dev overrides, mirroring vault.rs `hickeyfield_{SLUG}_{HALF}`.
     const slug = p.slug.toUpperCase().replace(/-/g, "_");
-    put(`HALATION_${slug}_KEY`, { provider: p.slug, secretHalf: false });
+    put(`hickeyfield_${slug}_KEY`, { provider: p.slug, secretHalf: false });
     if (p.needsSecret)
-      put(`HALATION_${slug}_SECRET`, { provider: p.slug, secretHalf: true });
+      put(`hickeyfield_${slug}_SECRET`, { provider: p.slug, secretHalf: true });
   }
 
   return map;

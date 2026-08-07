@@ -90,7 +90,7 @@ use std::time::Duration;
 /// Prefix on every [`Enhancer::version`] string. Bumped when the *shape* of a
 /// rewrite changes — the user message layout, the cleanup rules — so an old
 /// job record is still identifiable as having been made a different way.
-const ENHANCER_FAMILY: &str = "halation-enhance-1";
+const ENHANCER_FAMILY: &str = "hickeyfield-enhance-1";
 
 /// Output cap for the hosted backends.
 ///
@@ -661,13 +661,13 @@ fn describe_media(roles: &[MediaRole]) -> String {
 ///
 /// Defined by the corpus (`prompts/enhancer.v1.md` §2, rule O4) as exactly this
 /// string, alone on its own line.
-const NOTES_SENTINEL: &str = "===HALATION-NOTES===";
+const NOTES_SENTINEL: &str = "===HICKEYFIELD-NOTES===";
 
 /// Split a reply at the notes sentinel.
 ///
 /// Everything before the sentinel line is the prompt; everything after is one
 /// note per line. Matching is done on a *whole line* rather than with `find`,
-/// because a prompt legitimately describing "a sign reading ===HALATION-NOTES==="
+/// because a prompt legitimately describing "a sign reading ===HICKEYFIELD-NOTES==="
 /// mid-sentence must not be truncated there.
 fn split_notes(text: &str) -> (&str, Vec<String>) {
     let mut offset = 0usize;
@@ -703,7 +703,7 @@ pub struct CleanedReply {
 /// unambiguous to undo.
 ///
 /// Splitting the notes block off is not cosmetic. The corpus defines a second
-/// output channel after a `===HALATION-NOTES===` line, and anything left in the
+/// output channel after a `===HICKEYFIELD-NOTES===` line, and anything left in the
 /// prompt is submitted to a paid provider and rendered — an image model handed
 /// "B7: dropped '8k, masterpiece'" will try to draw that sentence. The channel is
 /// only *requested* when the user message says `Notes: enabled`, which
@@ -792,7 +792,7 @@ fn digest8(s: &str) -> String {
     format!("{:08x}", ((h ^ (h >> 32)) & 0xffff_ffff) as u32)
 }
 
-/// `halation-enhance-1 ollama qwen2.5:7b sys:29be8838`
+/// `hickeyfield-enhance-1 ollama qwen2.5:7b sys:29be8838`
 fn version_string(backend: &str, model: &str, system_prompt: &str) -> String {
     format!(
         "{ENHANCER_FAMILY} {backend} {model} sys:{}",
@@ -807,7 +807,7 @@ fn version_string(backend: &str, model: &str, system_prompt: &str) -> String {
 fn client(timeout: Duration) -> Result<reqwest::blocking::Client, String> {
     reqwest::blocking::Client::builder()
         .timeout(timeout)
-        .user_agent(concat!("halation/", env!("CARGO_PKG_VERSION")))
+        .user_agent(concat!("hickeyfield/", env!("CARGO_PKG_VERSION")))
         .build()
         .map_err(|e| format!("could not build HTTP client: {e}"))
 }
@@ -1448,7 +1448,7 @@ mod tests {
     fn the_user_message_carries_every_input_the_rewrite_depends_on() {
         let r = req()
             .with_media(&[MediaRole::Start, MediaRole::Reference, MediaRole::Reference])
-            .with_preset("soft film grain and gentle halation")
+            .with_preset("soft film grain and gentle hickeyfield")
             .with_duration(8);
         let msg = user_message(&r);
         assert!(msg.contains("Target model: Kling 2.5 Turbo Pro"), "{msg}");
@@ -1460,7 +1460,7 @@ mod tests {
             "{msg}"
         );
         assert!(
-            msg.contains("Preset: soft film grain and gentle halation"),
+            msg.contains("Preset: soft film grain and gentle hickeyfield"),
             "{msg}"
         );
         assert!(
@@ -1632,13 +1632,13 @@ mod tests {
         // model handed "B7: dropped '8k, masterpiece'" will try to draw it.
         let out = clean_reply(
             "A teapot on a windowsill.\n\
-             ===HALATION-NOTES===\n\
+             ===HICKEYFIELD-NOTES===\n\
              B7: dropped \"8k, masterpiece\" — style tokens.\n\
              B12: \"no hands\" rewritten as \"hands out of frame\".",
         )
         .unwrap();
         assert_eq!(out.prompt, "A teapot on a windowsill.");
-        assert!(!out.prompt.contains("HALATION-NOTES"));
+        assert!(!out.prompt.contains("HICKEYFIELD-NOTES"));
         assert!(!out.prompt.contains("B7"));
         assert_eq!(out.notes.len(), 2);
         assert!(out.notes[0].starts_with("B7:"));
@@ -1648,8 +1648,8 @@ mod tests {
     fn a_notes_block_inside_a_code_fence_is_still_split_off() {
         // A model that ignores "no markdown" usually ignores it for the whole
         // reply, wrapping prompt and notes together.
-        let out =
-            clean_reply("```\nA teapot.\n===HALATION-NOTES===\nB1: kept the count.\n```").unwrap();
+        let out = clean_reply("```\nA teapot.\n===HICKEYFIELD-NOTES===\nB1: kept the count.\n```")
+            .unwrap();
         assert_eq!(out.prompt, "A teapot.");
         assert_eq!(out.notes, vec!["B1: kept the count.".to_string()]);
     }
@@ -1658,7 +1658,7 @@ mod tests {
     fn the_sentinel_only_counts_on_a_line_of_its_own() {
         // Splitting on a bare `find` would truncate a prompt that legitimately
         // describes a sign bearing the text.
-        let s = "A sign reading ===HALATION-NOTES=== hangs above the door.";
+        let s = "A sign reading ===HICKEYFIELD-NOTES=== hangs above the door.";
         let out = clean_reply(s).unwrap();
         assert_eq!(out.prompt, s);
         assert!(out.notes.is_empty());
@@ -1666,7 +1666,7 @@ mod tests {
 
     #[test]
     fn a_reply_that_is_only_notes_is_an_error_not_a_blank_prompt() {
-        assert!(clean_reply("===HALATION-NOTES===\nB1: nothing to do.").is_err());
+        assert!(clean_reply("===HICKEYFIELD-NOTES===\nB1: nothing to do.").is_err());
     }
 
     #[test]
@@ -2056,15 +2056,15 @@ mod tests {
     fn the_version_names_the_backend_and_the_model() {
         assert_eq!(
             LocalEnhancer::new("qwen2.5:7b", SYS).version(),
-            "halation-enhance-1 ollama qwen2.5:7b sys:29be8838"
+            "hickeyfield-enhance-1 ollama qwen2.5:7b sys:29be8838"
         );
         assert_eq!(
             HostedEnhancer::openai("k", "gpt-x", SYS).version(),
-            "halation-enhance-1 openai gpt-x sys:29be8838"
+            "hickeyfield-enhance-1 openai gpt-x sys:29be8838"
         );
         assert_eq!(
             HostedEnhancer::anthropic("k", "claude-opus-5", SYS).version(),
-            "halation-enhance-1 anthropic claude-opus-5 sys:29be8838"
+            "hickeyfield-enhance-1 anthropic claude-opus-5 sys:29be8838"
         );
     }
 
@@ -2130,7 +2130,7 @@ mod tests {
     ///
     /// ```sh
     /// OLLAMA_ENHANCE_MODEL=qwen2.5:3b \
-    ///   cargo test -p halation-core --lib enhancer -- --ignored --nocapture
+    ///   cargo test -p hickeyfield-core --lib enhancer -- --ignored --nocapture
     /// ```
     #[test]
     #[ignore = "needs a running Ollama daemon; run with --ignored"]
@@ -2166,7 +2166,11 @@ mod tests {
         assert!(!out.prompt.trim().is_empty());
         assert!(!has_unresolved_sentinel(&out.prompt));
         // The truncation guard and the notes split both run on this path.
-        assert!(!out.prompt.contains("HALATION-NOTES"), "{:?}", out.prompt);
+        assert!(
+            !out.prompt.contains("HICKEYFIELD-NOTES"),
+            "{:?}",
+            out.prompt
+        );
         assert!(
             !out.prompt.contains("Target model:"),
             "echoed the input block"

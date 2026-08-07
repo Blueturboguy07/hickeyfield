@@ -1,12 +1,12 @@
 # First light — 2026-08-05
 
-The first time Halation ever talked to a real provider. Run with a live fal key via
-`crates/halation-core/examples/first_light.rs`, which reads the key from `FAL_KEY` so it never
+The first time Hickeyfield ever talked to a real provider. Run with a live fal key via
+`crates/hickeyfield-core/examples/first_light.rs`, which reads the key from `FAL_KEY` so it never
 lands in a file or a command line:
 
 ```sh
-FAL_KEY=$(security find-generic-password -s ai.halation.keys -a fal -w) \
-  cargo run -p halation-core --example first_light
+FAL_KEY=$(security find-generic-password -s ai.hickeyfield.keys -a fal -w) \
+  cargo run -p hickeyfield-core --example first_light
 ```
 
 Everything in the registry until now was transcribed from documents. This is the first

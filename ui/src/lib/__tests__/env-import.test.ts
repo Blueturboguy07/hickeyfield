@@ -94,8 +94,8 @@ describe("planEnvImport", () => {
     ]);
   });
 
-  it("understands the app's own HALATION_ dev overrides", () => {
-    const plan = planEnvImport("HALATION_FAL_KEY=f\nHALATION_HIGGSFIELD_SECRET=s");
+  it("understands the app's own hickeyfield_ dev overrides", () => {
+    const plan = planEnvImport("hickeyfield_FAL_KEY=f\nhickeyfield_HIGGSFIELD_SECRET=s");
     expect(plan.assignments).toEqual([
       { provider: "fal", secretHalf: false, value: "f" },
       { provider: "higgsfield", secretHalf: true, value: "s" },

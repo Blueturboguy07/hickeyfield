@@ -1,4 +1,4 @@
-//! Halation core.
+//! Hickeyfield core.
 //!
 //! Provider adapters, route resolution, the job engine, the preset compiler and
 //! cost estimation. This crate deliberately has no Tauri dependency so it stays

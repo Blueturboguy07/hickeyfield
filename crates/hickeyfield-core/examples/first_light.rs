@@ -17,14 +17,14 @@
 //! passed on a command line. Run it as:
 //!
 //! ```sh
-//! FAL_KEY=$(security find-generic-password -s ai.halation.keys -a fal -w) \
-//!   cargo run -p halation-core --example first_light
+//! FAL_KEY=$(security find-generic-password -s ai.hickeyfield.keys -a fal -w) \
+//!   cargo run -p hickeyfield-core --example first_light
 //! ```
 
-use halation_core::clients::FalClient;
-use halation_core::engine::ProviderClient;
-use halation_core::media::{self, Dialect, MediaRef, MediaRole, Uploader};
-use halation_core::{registry, Billable};
+use hickeyfield_core::clients::FalClient;
+use hickeyfield_core::engine::ProviderClient;
+use hickeyfield_core::media::{self, Dialect, MediaRef, MediaRole, Uploader};
+use hickeyfield_core::{registry, Billable};
 use std::time::{Duration, Instant};
 
 fn main() {
@@ -41,7 +41,7 @@ fn main() {
     // A tiny real PNG rather than a fixture URL: the point is to prove our own
     // upload path, not fal's CDN.
     println!("== upload ==");
-    let tmp = std::env::temp_dir().join("halation-first-light.png");
+    let tmp = std::env::temp_dir().join("hickeyfield-first-light.png");
     std::fs::write(&tmp, ONE_PIXEL_PNG).expect("write temp png");
     let uploaded = match client.upload(tmp.to_str().unwrap()) {
         Ok(url) => {
@@ -63,7 +63,7 @@ fn main() {
         let route = model
             .routes
             .iter()
-            .find(|r| r.provider == halation_core::ProviderId::Fal);
+            .find(|r| r.provider == hickeyfield_core::ProviderId::Fal);
         if let Some(route) = route {
             let bound = media::bind(
                 &model.spec,
@@ -93,7 +93,7 @@ fn main() {
             let r = m
                 .routes
                 .iter()
-                .find(|r| r.provider == halation_core::ProviderId::Fal)?;
+                .find(|r| r.provider == hickeyfield_core::ProviderId::Fal)?;
             let est = m.estimate(r, &billable)?;
             Some((m, r, est.usd))
         })

@@ -7,7 +7,7 @@
 //! pure function of the timeline, so it can be tested exhaustively in
 //! milliseconds without touching a file.
 //!
-//! Halation was originally planned around a hand-written WebCodecs frame
+//! Hickeyfield was originally planned around a hand-written WebCodecs frame
 //! pipeline in the browser. Going native replaced roughly 2,000 lines of frame
 //! plumbing — plus a 2 GB wasm ceiling, a COOP/COEP requirement and a Firefox
 //! AAC gap — with a string builder. There is no length or resolution limit
@@ -1428,23 +1428,23 @@ mod tests {
     // A filtergraph that reads correctly and that ffmpeg then rejects is the
     // default failure mode of this module, so these run the argv we actually
     // build against a real binary. Ignored by default because they need ffmpeg
-    // and ffprobe on PATH (override with HALATION_FFMPEG / HALATION_FFPROBE)
+    // and ffprobe on PATH (override with hickeyfield_FFMPEG / hickeyfield_FFPROBE)
     // and take a couple of seconds.
     //
-    //   cargo test -p halation-core --ignored
+    //   cargo test -p hickeyfield-core --ignored
     mod real {
         use super::*;
         use std::process::Command;
 
         fn ffmpeg() -> String {
-            std::env::var("HALATION_FFMPEG").unwrap_or_else(|_| "ffmpeg".into())
+            std::env::var("hickeyfield_FFMPEG").unwrap_or_else(|_| "ffmpeg".into())
         }
         fn ffprobe() -> String {
-            std::env::var("HALATION_FFPROBE").unwrap_or_else(|_| "ffprobe".into())
+            std::env::var("hickeyfield_FFPROBE").unwrap_or_else(|_| "ffprobe".into())
         }
 
         fn workdir(name: &str) -> PathBuf {
-            let dir = std::env::temp_dir().join(format!("halation-compositor-{name}"));
+            let dir = std::env::temp_dir().join(format!("hickeyfield-compositor-{name}"));
             let _ = std::fs::remove_dir_all(&dir);
             std::fs::create_dir_all(&dir).expect("temp dir");
             dir

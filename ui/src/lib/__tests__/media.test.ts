@@ -29,9 +29,9 @@ describe("displayUrl", () => {
     // The bug this prevents: fal's signed URLs expire and Higgsfield deletes
     // after 7 days, so a feed rendering `url` goes blank while perfectly good
     // files sit on disk — contradicting the promise the feed itself renders.
-    const r = result({ localPath: "/Users/x/Halation/2026-08-04/shot.png" });
+    const r = result({ localPath: "/Users/x/Hickeyfield/2026-08-04/shot.png" });
     expect(displayUrl(r)).toBe(
-      "asset:///Users/x/Halation/2026-08-04/shot.png",
+      "asset:///Users/x/Hickeyfield/2026-08-04/shot.png",
     );
   });
 
@@ -65,7 +65,7 @@ describe("isPlayableVideo", () => {
     const r = result({
       kind: "video",
       url: "https://queue.fal.run/requests/abc/output",
-      localPath: "/Users/x/Halation/clip.mp4",
+      localPath: "/Users/x/Hickeyfield/clip.mp4",
     });
     expect(isPlayableVideo(r)).toBe(true);
   });

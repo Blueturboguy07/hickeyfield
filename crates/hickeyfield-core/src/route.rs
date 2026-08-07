@@ -68,7 +68,7 @@ pub enum RouteError {
     /// The user holds no key for any provider that serves this model, and at
     /// least one of them is something they could add.
     NoConfiguredProvider { needed: Vec<ProviderId> },
-    /// The user *does* hold a key, but Halation has no client for that provider
+    /// The user *does* hold a key, but Hickeyfield has no client for that provider
     /// yet. Nothing the user can do — do not send them to Settings.
     NoAdapter { held: Vec<ProviderId> },
     /// The pinned route is not one this model offers.
@@ -94,7 +94,7 @@ impl std::fmt::Display for RouteError {
             }
             RouteError::NoAdapter { held } => write!(
                 f,
-                "Halation cannot reach this model through {} yet — your key is fine, the adapter is not built. Pick a model served by fal.",
+                "Hickeyfield cannot reach this model through {} yet — your key is fine, the adapter is not built. Pick a model served by fal.",
                 names(held)
             ),
             RouteError::UnknownPin(id) => write!(f, "no such route for this model: {id}"),
@@ -133,7 +133,7 @@ where
         if !route.provider.has_adapter() {
             return Err(RouteError::PinUnusable {
                 id: pin.to_string(),
-                why: "Halation has no client for that provider yet",
+                why: "Hickeyfield has no client for that provider yet",
             });
         }
         if route.provider.needs_key() && !available.contains(&route.provider) {

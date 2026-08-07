@@ -1,7 +1,7 @@
 //! Run the real enhancer against a local model and print what it does.
-use halation_core::corpus;
-use halation_core::enhancer::{enhance_or_original, mode_for, EnhanceRequest, LocalEnhancer};
-use halation_core::{catalog::Modality, enhance::JobType};
+use hickeyfield_core::corpus;
+use hickeyfield_core::enhancer::{enhance_or_original, mode_for, EnhanceRequest, LocalEnhancer};
+use hickeyfield_core::{catalog::Modality, enhance::JobType};
 
 fn main() {
     let tag = std::env::args().nth(1).unwrap_or("qwen2.5:7b".into());

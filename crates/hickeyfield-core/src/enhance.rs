@@ -1019,7 +1019,7 @@ mod tests {
     fn full_parts() -> PromptParts {
         PromptParts::scene("A cracked porcelain teapot on a windowsill at dawn")
             .with_camera("push-in")
-            .with_preset("soft film grain and gentle halation")
+            .with_preset("soft film grain and gentle hickeyfield")
             .with_lighting("low winter sun through dusty glass")
             .with_lens("50mm, shallow depth of field")
             .with_mood("quiet, unhurried")
@@ -1035,7 +1035,7 @@ mod tests {
              Speed: so gradual it is barely noticeable. \
              Framing: narrow the frame steadily so pressure builds. \
              End: arrive at a close-up and stop. \
-             soft film grain and gentle halation. \
+             soft film grain and gentle hickeyfield. \
              A cracked porcelain teapot on a windowsill at dawn. \
              Lighting: low winter sun through dusty glass. \
              Lens: 50mm, shallow depth of field. \

@@ -6,7 +6,7 @@ licence-filtered dedup → 6 deep reads → 2 gap measurements against this repo
 high, 10 medium). Every claim below that drove a code change was independently re-verified
 against the tree or against a live provider schema before acting on it.
 
-Companion to [PARITY.md](PARITY.md), which measures Halation against *Higgsfield*. This file
+Companion to [PARITY.md](PARITY.md), which measures Hickeyfield against *Higgsfield*. This file
 measures it against the *open-source state of the art* and says what to do about it.
 
 ---
@@ -18,7 +18,7 @@ measures it against the *open-source state of the art* and says what to do about
 The prior teardown (`~/higgsfield-research/oss-landscape.md`, 2026-08-02) was re-verified and
 stands: `Anil-matcha/Open-Generative-AI` is at 25,526 stars with a genuine MIT licence and a
 `middleware.js` that still rewrites every request to `api.muapi.ai` — a lead-gen funnel for a
-paid aggregator, i.e. exactly the server-holds-the-key model Halation exists to reject. Only
+paid aggregator, i.e. exactly the server-holds-the-key model Hickeyfield exists to reject. Only
 its marketing copy changed in two days.
 
 But that survey searched the literal string "higgsfield" sorted by stars, and therefore
@@ -46,7 +46,7 @@ preset corpus.**
 
 ## 2. The finding that reframes everything
 
-> **Halation's harness is largely disconnected from its own shell.**
+> **Hickeyfield's harness is largely disconnected from its own shell.**
 
 Presets, prompt-enhance and provider parameter translation are never executed on a real
 generation, and every bridge call silently substituted fabricated mock results on failure —
@@ -66,7 +66,7 @@ through `commands.rs`, not only through the crate's own unit tests.*
 ### ✅ Input media path (was: entirely missing)
 
 `SubmitInput` carried no media and `submit_to_provider` sent only prompt + flags, so
-image-to-video could not work at all. Built `crates/halation-core/src/media.rs` (roles →
+image-to-video could not work at all. Built `crates/hickeyfield-core/src/media.rs` (roles →
 wire flags, `Uploader` trait), fal + Higgsfield uploaders, and a Tauri-dialog file picker
 that yields real filesystem paths. See PARITY.md §3.3a.
 
@@ -103,7 +103,7 @@ tsc · vitest all pass.
 
 ## 4. Ranked remaining work
 
-Ordered by user-visible impact ÷ effort. Each is tagged with whether it makes Halation
+Ordered by user-visible impact ÷ effort. Each is tagged with whether it makes Hickeyfield
 **better** or merely **more like Higgsfield** — both legitimate, conflating them is not.
 
 | # | Action | Effort | Kind |
@@ -112,7 +112,7 @@ Ordered by user-visible impact ÷ effort. Each is tagged with whether it makes H
 | 2 | **Intersect route availability with adapter existence.** `route.rs` filters by "user holds a key", but `client_for` implements only fal and Higgsfield. With the default *cheapest* policy, a user who adds a Vaig key gets Vaig selected and then told *"no credentials for Vercel AI Gateway — add a key"* — after adding exactly that key. Worst possible failure shape for a BYO-key product, ~12 lines to fix. | S | better |
 | 3 | **Ship real per-model capabilities over the bridge.** `capabilitiesFor()` returns the same hardcoded defaults for all 68 models, so the chip row lies about every one: pick 10s on a 5s model, the estimator quotes 10s, the button shows that price, the provider rejects after the round trip. Seed from `higgsfield-ai/skills` (MIT). | M | better |
 | 4 | **Make results real files.** `runner.rs` already downloads every output and sets `local_path`, but the wire shape drops it, so cards render the provider's *signed, expiring* URL. Once signatures lapse the feed goes blank while good files sit on disk. Add Download/Reveal; make Delete durable. | S | better |
-| 5 | ~~**`to_provider` adapter layer.**~~ **Largely done 2026-08-05** — not by hand-authoring a table but by reading fal's published per-endpoint OpenAPI at submit time (`crates/halation-core/src/fal_schema.rs`). Drops fields the endpoint does not declare, reconciles spelling (`1k`→`1K`, `4`→`4s`), and refuses rather than silently ignoring attached media. Nomi turned out to have no fal data to seed it with, which is fine: fal publishes its own. | — | done |
+| 5 | ~~**`to_provider` adapter layer.**~~ **Largely done 2026-08-05** — not by hand-authoring a table but by reading fal's published per-endpoint OpenAPI at submit time (`crates/hickeyfield-core/src/fal_schema.rs`). Drops fields the endpoint does not declare, reconciles spelling (`1k`→`1K`, `4`→`4s`), and refuses rather than silently ignoring attached media. Nomi turned out to have no fal data to seed it with, which is fine: fal publishes its own. | — | done |
 | 6 | **Preset packs as versioned JSON.** `camera.rs` is `pub const TEMPLATES` — compile-time literals, Serialize-only. Adding one preset means editing Rust and shipping a binary; at 419 presets that is arithmetically impossible and third parties can never contribute. Seed from openfield (MIT, 61 presets). | L | both |
 | 7 | **Library surface.** The app generates media the user cannot browse. Sequence *after* the pack format so the browser isn't built twice. | L | parity |
 | 8 | **An actual enhancer.** `EnhanceReason` is fully modelled and tested; no LLM rewrite exists anywhere. Enhance rule 1 forces enhance on for a real preset *because the preset's aesthetic is delivered by the rewrite* — with no enhancer, every preset ships its name with none of its effect. | M | better |

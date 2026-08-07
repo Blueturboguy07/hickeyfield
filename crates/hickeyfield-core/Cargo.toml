@@ -1,5 +1,5 @@
 [package]
-name = "halation-core"
+name = "hickeyfield-core"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -7,9 +7,9 @@ license.workspace = true
 repository.workspace = true
 # Never goes to crates.io; it ships inside the app bundle.
 publish = false
-description = "Provider adapters, routing, job engine, preset compiler and cost estimation for Halation. No Tauri dependency."
+description = "Provider adapters, routing, job engine, preset compiler and cost estimation for Hickeyfield. No Tauri dependency."
 
-# Deliberately dependency-light and Tauri-free so `cargo test -p halation-core`
+# Deliberately dependency-light and Tauri-free so `cargo test -p hickeyfield-core`
 # runs in seconds without linking a webview.
 [dependencies]
 anyhow.workspace = true

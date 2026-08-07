@@ -19,8 +19,8 @@ runtime price feeds — not from this file.
 
 ```sh
 curl -sL https://raw.githubusercontent.com/higgsfield-ai/cli/main/MODELS.md \
-  -o crates/halation-core/vendor/higgsfield-cli-MODELS.md
-cargo test -p halation-core catalog
+  -o crates/hickeyfield-core/vendor/higgsfield-cli-MODELS.md
+cargo test -p hickeyfield-core catalog
 ```
 
 The parser tests assert on real counts, so a refresh that changes the roster

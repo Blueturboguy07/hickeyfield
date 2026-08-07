@@ -1,15 +1,16 @@
-# Halation
+# Hickeyfield
 
 A free, open-source desktop studio for AI video and image generation. Bring
 your own API keys and pay providers directly at cost — there is no subscription,
 no credits, no plan gating, and nothing to pay us.
 
-*Halation* is the reddish bloom that haloes a bright highlight on film stock.
+A *hickey* is the speck of dirt that prints as a haloed blemish — the flaw that
+proves a thing went through a real press rather than a renderer.
 
-> Halation is an independent open-source project. It is not affiliated with,
+> Hickeyfield is an independent open-source project. It is not affiliated with,
 > endorsed by, or sponsored by Higgsfield, Inc.
 
-**Status: early, and honest about it.** Halation generates: you add a provider
+**Status: early, and honest about it.** Hickeyfield generates: you add a provider
 key, pick a use case, attach media if the job needs it, and get real video and
 images back, saved to a folder you choose. What is *verified end to end* is the
 fal route on macOS — upload, submit, poll, download, play. Windows builds in CI
@@ -20,7 +21,7 @@ generator (library, audio, studios) are not built yet.
 
 The guided install walks you through it start to finish, on macOS or Windows:
 
-**[publikhq.com/halation](https://publikhq.com/halation)**
+**[publikhq.com/hickeyfield](https://publikhq.com/hickeyfield)**
 
 Or build it yourself — see [Development](#development). You will need a key from
 at least one provider; [fal.ai](https://fal.ai) alone is enough to use
@@ -44,7 +45,7 @@ Fast/Lite, Grok direct, Gemini Omni, Seedream, Recraft, upscaling and every
 self-hosted path, you pay considerably less. And you never pay for a month you
 didn't use.
 
-Halation always shows the real USD cost before you submit, computed from live
+Hickeyfield always shows the real USD cost before you submit, computed from live
 provider price feeds rather than an opaque credit integer.
 
 ## What it does today
@@ -74,7 +75,7 @@ Ollama. Nothing is sent anywhere for this unless you ask for it.
 Tauri v2 — a Rust core with a React UI in the system webview.
 
 ```
-crates/halation-core/   provider adapters, routing, job engine, presets, costs
+crates/hickeyfield-core/   provider adapters, routing, job engine, presets, costs
                         (no Tauri dependency, so tests run in seconds)
 src-tauri/              the desktop shell: commands, events, window lifecycle
 ui/                     React + Vite frontend

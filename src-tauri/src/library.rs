@@ -8,7 +8,7 @@
 //! Files land in a real directory the user chose, not an opaque app cache.
 //! They paid for these; they should be able to find them in Finder.
 
-use halation_core::engine::{JobError, Output, OutputKind};
+use hickeyfield_core::engine::{JobError, Output, OutputKind};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
@@ -22,15 +22,15 @@ use std::path::{Path, PathBuf};
 ///
 /// 1. It is where a person already looks for video, and it is backed up and
 ///    indexed like the rest of their media.
-/// 2. **`~/Halation` collides.** macOS filesystems are case-insensitive by
-///    default, so it resolves to any existing `~/halation` — which on a
+/// 2. **`~/Hickeyfield` collides.** macOS filesystems are case-insensitive by
+///    default, so it resolves to any existing `~/hickeyfield` — which on a
 ///    developer's machine is the source checkout. Observed live on 2026-08-05:
 ///    a generated clip was written into the repo root next to `Cargo.toml`.
 ///    Writing user media into an unrelated existing directory is bad on its own
 ///    terms; doing it to a git worktree is worse.
 pub fn default_root() -> PathBuf {
     let Some(home) = dirs_home() else {
-        return PathBuf::from("Halation");
+        return PathBuf::from("Hickeyfield");
     };
     let media = if cfg!(target_os = "windows") {
         home.join("Videos")
@@ -40,9 +40,9 @@ pub fn default_root() -> PathBuf {
     // Only if the media folder actually exists — a stripped-down or headless
     // account may not have one, and creating it silently is presumptuous.
     if media.is_dir() {
-        media.join("Halation")
+        media.join("Hickeyfield")
     } else {
-        home.join("Halation")
+        home.join("Hickeyfield")
     }
 }
 
@@ -267,7 +267,7 @@ mod tests {
     #[test]
     fn default_root_is_visible_not_hidden_in_app_data() {
         let root = default_root();
-        assert!(root.ends_with("Halation"), "got {}", root.display());
+        assert!(root.ends_with("Hickeyfield"), "got {}", root.display());
         assert!(
             !root.to_string_lossy().contains("Application Support"),
             "the library must be somewhere a person can find it"
@@ -276,13 +276,13 @@ mod tests {
 
     #[test]
     fn the_default_root_is_not_the_bare_home_directory() {
-        // The collision this prevents: macOS is case-insensitive, so ~/Halation
-        // resolves to an existing ~/halation — on this machine, the source
+        // The collision this prevents: macOS is case-insensitive, so ~/Hickeyfield
+        // resolves to an existing ~/hickeyfield — on this machine, the source
         // checkout. A generated clip was written next to Cargo.toml before this
         // changed.
         let Some(home) = dirs_home() else { return };
         let root = default_root();
-        assert_ne!(root, home.join("Halation").clone());
+        assert_ne!(root, home.join("Hickeyfield").clone());
         assert!(
             root.starts_with(home.join("Movies")) || root.starts_with(home.join("Videos")),
             "expected a media folder, got {}",

@@ -28,13 +28,13 @@ jobs:
       - name: Formatting
         run: cargo fmt --all --check
 
-      # halation-core has no Tauri dependency, so it lints and tests without a
+      # hickeyfield-core has no Tauri dependency, so it lints and tests without a
       # webview toolchain. That is the whole point of the crate split.
       - name: Clippy (core)
-        run: cargo clippy -p halation-core --all-targets -- -D warnings
+        run: cargo clippy -p hickeyfield-core --all-targets -- -D warnings
 
       - name: Unit tests (core)
-        run: cargo test -p halation-core
+        run: cargo test -p hickeyfield-core
 
       - name: Provenance
         run: python3 scripts/lint-provenance.py
@@ -119,7 +119,7 @@ jobs:
           pnpm exec vitest run --passWithNoTests
 
       - name: Clippy (shell)
-        run: cargo clippy -p halation-tauri --all-targets --target ${{ matrix.target }} -- -D warnings
+        run: cargo clippy -p hickeyfield-tauri --all-targets --target ${{ matrix.target }} -- -D warnings
 
       # From the repo root, not from ui/. The Tauri CLI finds its project by
       # walking *down* for tauri.conf.json, and src-tauri is a sibling of ui —

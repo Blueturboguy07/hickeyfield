@@ -119,7 +119,7 @@ export type MediaRole =
   | "audio"
   | "audio_reference";
 
-/** Mirrors `halation_core::MediaSource`, which is `#[serde(tag = "kind")]`. */
+/** Mirrors `hickeyfield_core::MediaSource`, which is `#[serde(tag = "kind")]`. */
 export type MediaSource =
   | { kind: "local"; path: string }
   | { kind: "url"; url: string }

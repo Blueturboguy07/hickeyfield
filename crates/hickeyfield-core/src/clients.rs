@@ -20,7 +20,7 @@ use std::time::Duration;
 fn http() -> Result<reqwest::blocking::Client, JobError> {
     reqwest::blocking::Client::builder()
         .timeout(Duration::from_secs(60))
-        .user_agent(concat!("halation/", env!("CARGO_PKG_VERSION")))
+        .user_agent(concat!("hickeyfield/", env!("CARGO_PKG_VERSION")))
         .build()
         .map_err(|e| JobError::Permanent(format!("could not build HTTP client: {e}")))
 }
@@ -464,7 +464,7 @@ fn size_refusal(len: u64, name: &str) -> Option<String> {
         // endpoint will not accept whole — a mid-transfer failure reads as a
         // network problem rather than as a limit.
         return Some(format!(
-            "{name} is {:.0} MB — files above 90 MB need fal's multipart upload, which Halation does not implement yet. Trim the clip or upload it to a URL first.",
+            "{name} is {:.0} MB — files above 90 MB need fal's multipart upload, which Hickeyfield does not implement yet. Trim the clip or upload it to a URL first.",
             len as f64 / 1_048_576.0
         ));
     }

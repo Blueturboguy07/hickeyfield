@@ -2,7 +2,7 @@
 
 **2026-08-05. Read-only trace; no code was changed to produce this.**
 
-`crates/halation-core/src/enhance.rs` is 1,169 lines, fully tested, and **called by nothing
+`crates/hickeyfield-core/src/enhance.rs` is 1,169 lines, fully tested, and **called by nothing
 outside its own test module and `lib.rs`'s re-export**. `BRIDGE.md` §2 names this as the
 finding that reframes the project. This file is the integration spec that closes it.
 
@@ -129,14 +129,14 @@ Insert immediately after the registry lookup at `commands.rs:488`.
 /// wearing a different hat: the job runs with no aesthetic and full price.
 fn resolve_preset(id: Option<&str>) -> Result<Option<&'static PresetFamily>, String> {
     let Some(id) = id else { return Ok(None) };
-    if let Some(f) = halation_core::preset::get(id) {
+    if let Some(f) = hickeyfield_core::preset::get(id) {
         return Ok(Some(f));
     }
     // A General sentinel has no family — the catalogue holds camera moves only
     // (preset.rs:441–444) — but it is a legitimate selection meaning "no preset".
     // `PresetSelection` already treats None and General identically
     // (enhance.rs test `no_preset_behaves_exactly_like_general`).
-    if halation_core::preset::is_general_id(id) {
+    if hickeyfield_core::preset::is_general_id(id) {
         return Ok(None);
     }
     Err(format!(
@@ -159,9 +159,9 @@ let variant = family.and_then(|f| f.resolve_variant(&model.id));   // preset.rs:
 /// `MediaCounts` from attached roles. Every image role counts, because the
 /// constraint the presets express is on how many pictures the model sees
 /// (preset.rs:216–225).
-fn media_counts(media: &[halation_core::MediaRef]) -> halation_core::preset::MediaCounts {
-    use halation_core::MediaRole::*;
-    let mut c = halation_core::preset::MediaCounts::default();
+fn media_counts(media: &[hickeyfield_core::MediaRef]) -> hickeyfield_core::preset::MediaCounts {
+    use hickeyfield_core::MediaRole::*;
+    let mut c = hickeyfield_core::preset::MediaCounts::default();
     for m in media {
         match m.role {
             Start | End | Reference => c.images += 1,
@@ -207,7 +207,7 @@ let preset_clause: Option<String> = variant
     .filter(|t| Some(*t) != rendered_camera.as_deref())
     .map(str::to_string);
 
-let mut parts = halation_core::PromptParts::scene(&input.prompt);
+let mut parts = hickeyfield_core::PromptParts::scene(&input.prompt);
 if let Some(slug) = family.and_then(|f| f.camera_template.as_deref()) {
     parts = parts.with_camera(slug);
 }
@@ -225,14 +225,14 @@ the move is silently lost — worth a warning on the job (see H11), not a refusa
 ### Step 4 — the three inputs, and `enhance::build`
 
 ```rust
-let inputs = halation_core::EnhanceInputs {
+let inputs = hickeyfield_core::EnhanceInputs {
     job: model.job_type,                                        // registry.rs:51
-    preset: halation_core::PresetSelection::from_family(family),// enhance.rs:231
-    has_end_frame: halation_core::media::has_end_frame(&input.media), // media.rs:679
+    preset: hickeyfield_core::PresetSelection::from_family(family),// enhance.rs:231
+    has_end_frame: hickeyfield_core::media::has_end_frame(&input.media), // media.rs:679
     user_toggle: input.settings.enhance,                        // Option<bool> after H4
 };
 
-let compiled = halation_core::enhance::build(
+let compiled = hickeyfield_core::enhance::build(
     &parts,
     inputs,
     variant.and_then(|v| v.negative_prompt.as_deref()),
@@ -253,7 +253,7 @@ if compiled.has_unresolved_sentinel {
     // states the rule; this is the call site that has to honour it.
     return Err(format!(
         "This prompt still refers to an attachment that is not attached: {}",
-        halation_core::enhance::sentinels(&compiled.prompt)
+        hickeyfield_core::enhance::sentinels(&compiled.prompt)
             .iter().map(|s| s.token()).collect::<Vec<_>>().join(", ")
     ));
 }
@@ -293,7 +293,7 @@ if compiled.enhance {
         .ok_or_else(|| "Prompt enhancement is on but no enhancer is configured. \
                         Pick one in Settings, or turn Enhance off.".to_string())?;
 
-    let out = halation_core::rewrite::run(&choice, &halation_core::rewrite::Request {
+    let out = hickeyfield_core::rewrite::run(&choice, &hickeyfield_core::rewrite::Request {
         prompt: &compiled.prompt,
         job: model.job_type,
         model_name: &model.display_name,
@@ -434,7 +434,7 @@ returns `None` because the catalogue holds camera families only, which is why
 
 ```rust
 /// Which rewriter produced `enhanced_prompt`, as `{backend}/{model}+{template}` —
-/// e.g. `ollama/llama3.1:8b+halation-rewrite-v1`.
+/// e.g. `ollama/llama3.1:8b+hickeyfield-rewrite-v1`.
 ///
 /// The template id is not decoration. When our system prompt changes, identical inputs
 /// start producing different text, and a record naming only the model cannot explain
@@ -628,7 +628,7 @@ The rewriter must refuse empty output (§8.1) rather than let this guard swallow
 
 ## 8. The rewriter, and the UI that chooses it
 
-### 8.1 New module: `crates/halation-core/src/rewrite.rs`
+### 8.1 New module: `crates/hickeyfield-core/src/rewrite.rs`
 
 Named `rewrite`, not `enhancer`: `enhance` and `enhancer` differ by two characters and would
 be indistinguishable in an import list. `enhance.rs` decides; `rewrite.rs` executes.

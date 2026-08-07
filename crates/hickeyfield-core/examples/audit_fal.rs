@@ -15,13 +15,13 @@
 //!    not declare, so it silently has no effect.
 //! 4. **Wrong option sets** — our chip row offers values the endpoint rejects.
 //!
-//! Run: `cargo run -p halation-core --example audit_fal`. No key needed; fal's
+//! Run: `cargo run -p hickeyfield-core --example audit_fal`. No key needed; fal's
 //! schema endpoint is unauthenticated.
 
-use halation_core::catalog::ValueSpec;
-use halation_core::fal_schema;
-use halation_core::media::{self, InputMode};
-use halation_core::registry;
+use hickeyfield_core::catalog::ValueSpec;
+use hickeyfield_core::fal_schema;
+use hickeyfield_core::media::{self, InputMode};
+use hickeyfield_core::registry;
 use std::collections::BTreeSet;
 
 fn main() {
@@ -37,7 +37,7 @@ fn main() {
         let Some(route) = m
             .routes
             .iter()
-            .find(|r| r.provider == halation_core::ProviderId::Fal)
+            .find(|r| r.provider == hickeyfield_core::ProviderId::Fal)
         else {
             continue;
         };
@@ -177,7 +177,7 @@ fn main() {
 fn schema_enum(endpoint: &str, field: &str) -> Option<BTreeSet<String>> {
     let doc: serde_json::Value = reqwest::blocking::Client::builder()
         .timeout(std::time::Duration::from_secs(8))
-        .user_agent("halation-audit")
+        .user_agent("hickeyfield-audit")
         .build()
         .ok()?
         .get(format!(

@@ -13,9 +13,9 @@
 //! thread, and answers "what will this cost" from live data where live data
 //! exists.
 
-use halation_core::cost::{Billable, Estimate};
-use halation_core::prices::PriceFeed;
-use halation_core::{Model, Route};
+use hickeyfield_core::cost::{Billable, Estimate};
+use hickeyfield_core::prices::PriceFeed;
+use hickeyfield_core::{Model, Route};
 use serde::Serialize;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
@@ -135,7 +135,7 @@ pub struct PriceStatus {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use halation_core::registry::registry;
+    use hickeyfield_core::registry::registry;
 
     fn billable() -> Billable {
         Billable {

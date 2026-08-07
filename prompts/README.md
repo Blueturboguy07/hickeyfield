@@ -1,11 +1,11 @@
 # `prompts/` — the enhancer corpus
 
-This directory is the filmmaking knowledge Halation uses when it rewrites a user's prompt
+This directory is the filmmaking knowledge Hickeyfield uses when it rewrites a user's prompt
 before submitting a generation. It is content, not code: plain Markdown, versioned, immutable
 once shipped, and pinned by id on every generation that used it.
 
 It exists because of a specific hole in the product. The harness already models the *decision*
-of whether to rewrite — `crates/halation-core/src/enhance.rs` implements the three rules and
+of whether to rewrite — `crates/hickeyfield-core/src/enhance.rs` implements the three rules and
 the per-job-type default table, all tested — but there has never been a rewriter behind that
 decision. A preset selected in the picker forces enhancement on, precisely because a preset's
 look is delivered by the rewrite; with nothing behind it, every preset shipped its name and
@@ -91,17 +91,17 @@ Pick a wiring and pin it. Both are defensible; leaving it ambiguous is not.
 ### The notes channel is off until something splits it
 
 `Notes: enabled` is an optional line in the context block that turns on a second output
-channel — the model appends `===HALATION-NOTES===` and one line per rule it applied, so the UI
+channel — the model appends `===HICKEYFIELD-NOTES===` and one line per rule it applied, so the UI
 can tell the user what was traded and why.
 
 **`enhancer::user_message` does not emit that line today, and `enhancer::clean_reply` does not
 strip the block.** That combination is safe in exactly one direction: with the line absent, the
 corpus tells the model to emit the prompt alone, so nothing is appended and nothing needs
-splitting. Sending the line before the splitter exists would submit `===HALATION-NOTES===` and
+splitting. Sending the line before the splitter exists would submit `===HICKEYFIELD-NOTES===` and
 every note to the provider as part of the prompt.
 
 So the ordering is fixed: **build the splitter first, wire the line second.** The splitter cuts
-at the first line that is exactly `===HALATION-NOTES===`, submits everything before it, and
+at the first line that is exactly `===HICKEYFIELD-NOTES===`, submits everything before it, and
 keeps the rest as structured display text. If the sentinel is absent the whole reply is the
 prompt — that must remain the default, because it is what makes a model that ignores the notes
 instruction harmless.
@@ -127,7 +127,7 @@ looks at, keeps, shares and re-runs. If the corpus changes underneath it, three 
    from *that* input is part of the generation just as much as the sampler seed is. Re-running
    through a corpus that has since been "improved" gives a different prompt, a different
    output, and a different price, while the UI still says the word rerun.
-2. **A shared recipe becomes a lie.** Recipes are the community surface Halation kept in place
+2. **A shared recipe becomes a lie.** Recipes are the community surface Hickeyfield kept in place
    of a social product. A recipe that cannot name the rewriter that wrote its prompt cannot
    reproduce its own result on someone else's machine.
 3. **Nothing can be evaluated.** The only way to know whether a corpus change helped is to
@@ -143,7 +143,7 @@ history of what it used to believe.
 ### Where the pin lives
 
 `Recipe::enhancer_version: Option<String>` already exists for exactly this and is currently
-`None` on every recipe Halation writes, with a comment saying it is `None` because no rewriter
+`None` on every recipe Hickeyfield writes, with a comment saying it is `None` because no rewriter
 exists yet. This corpus is that rewriter.
 
 Recorded format:
@@ -239,7 +239,7 @@ number, which is precisely why it has one.
 
 ## Provenance
 
-⚖️ Every line in this directory was written for Halation.
+⚖️ Every line in this directory was written for Hickeyfield.
 
 The *shape* of several ideas here comes from studying how Higgsfield's product behaves — that
 a rewriter should be preset-aware, that enhancement should default on for prose-hungry models

@@ -1,5 +1,5 @@
 [package]
-name = "halation-tauri"
+name = "hickeyfield-tauri"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -7,10 +7,10 @@ license.workspace = true
 repository.workspace = true
 # Never goes to crates.io; it ships inside the app bundle.
 publish = false
-description = "Halation desktop shell"
+description = "Hickeyfield desktop shell"
 
 [lib]
-name = "halation_tauri_lib"
+name = "hickeyfield_tauri_lib"
 # staticlib/cdylib are required for the mobile targets Tauri generates; rlib
 # keeps the crate usable from tests and from main.rs.
 crate-type = ["staticlib", "cdylib", "rlib"]
@@ -19,7 +19,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-halation-core = { path = "../crates/halation-core" }
+hickeyfield-core = { path = "../crates/hickeyfield-core" }
 tauri = { version = "2", features = ["protocol-asset"] }
 tauri-plugin-shell = "2"
 tauri-plugin-dialog = "2"

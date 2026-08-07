@@ -190,7 +190,7 @@ pub enum Concurrency {
     /// A ceiling the provider is understood to enforce. Treat as a safe floor
     /// for the cheapest account tier, not as a universal truth.
     Provider(u32),
-    /// No provider limit we have verified. The number is Halation's own and is
+    /// No provider limit we have verified. The number is Hickeyfield's own and is
     /// **not** a claim about the provider's policy. It exists because
     /// "unbounded" is the wrong default for a desktop app that would otherwise
     /// open one socket per job the user clicks.
@@ -214,7 +214,7 @@ impl Concurrency {
 
     /// Whether the figure came from the provider rather than from us. Drives
     /// the copy — "fal allows 2 at a time" is a statement about fal, "up to 4
-    /// at a time" is a statement about Halation, and saying the second in the
+    /// at a time" is a statement about Hickeyfield, and saying the second in the
     /// voice of the first would be inventing a provider policy.
     pub const fn is_provider_stated(self) -> bool {
         matches!(self, Concurrency::Provider(_))

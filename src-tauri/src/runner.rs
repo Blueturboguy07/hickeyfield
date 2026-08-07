@@ -9,7 +9,7 @@
 //! store on launch rather than from anything the webview remembers.
 
 use crate::library::Library;
-use halation_core::engine::{
+use hickeyfield_core::engine::{
     apply_poll, Backoff, JobError, JobSet, JobStore, ProviderClient, DEFAULT_TIMEOUT,
 };
 use std::collections::HashSet;
@@ -154,7 +154,7 @@ fn download_outputs(
     on_update: OnUpdate,
     library: Arc<Library>,
 ) {
-    if job.status.phase() != halation_core::Phase::Completed || job.results.is_empty() {
+    if job.status.phase() != hickeyfield_core::Phase::Completed || job.results.is_empty() {
         return;
     }
     let Ok(client) = reqwest::blocking::Client::builder()
@@ -199,7 +199,7 @@ fn poll_until_terminal(
         move || abandoned.lock().unwrap().contains(&id)
     };
     let Some(client) = clients(&job.route_id) else {
-        job.status = halation_core::JobStatus::Failed;
+        job.status = hickeyfield_core::JobStatus::Failed;
         job.fail_reason = Some(format!(
             "no credentials for {} — add a key in Settings",
             job.route_id.split(':').next().unwrap_or("this provider")
@@ -236,7 +236,7 @@ fn poll_until_terminal(
             return job;
         }
         if started.elapsed() > DEFAULT_TIMEOUT {
-            job.status = halation_core::JobStatus::Failed;
+            job.status = hickeyfield_core::JobStatus::Failed;
             job.fail_reason = Some(format!(
                 "gave up after {} minutes with no result from the provider",
                 DEFAULT_TIMEOUT.as_secs() / 60
@@ -267,7 +267,7 @@ fn poll_until_terminal(
                         // Exhausted. The generation may well have succeeded on
                         // the provider's side, so say that rather than claiming
                         // it failed outright.
-                        job.status = halation_core::JobStatus::Failed;
+                        job.status = hickeyfield_core::JobStatus::Failed;
                         job.fail_reason = Some(format!(
                             "lost contact with the provider after {} attempts: {e}",
                             backoff.max_attempts
@@ -280,7 +280,7 @@ fn poll_until_terminal(
                 }
             }
             Err(e) => {
-                job.status = halation_core::JobStatus::Failed;
+                job.status = hickeyfield_core::JobStatus::Failed;
                 job.fail_reason = Some(e.to_string());
                 job.updated_at = now_secs();
                 let _ = store.upsert(&job);
@@ -294,8 +294,8 @@ fn poll_until_terminal(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use halation_core::engine::{Output, OutputKind, PollResult};
-    use halation_core::JobStatus;
+    use hickeyfield_core::engine::{Output, OutputKind, PollResult};
+    use hickeyfield_core::JobStatus;
     use std::collections::HashMap;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::time::Duration;
@@ -335,8 +335,8 @@ mod tests {
             &self,
             _m: &str,
             _b: &serde_json::Value,
-        ) -> Result<halation_core::engine::Submission, JobError> {
-            Ok(halation_core::engine::Submission {
+        ) -> Result<hickeyfield_core::engine::Submission, JobError> {
+            Ok(hickeyfield_core::engine::Submission {
                 request_id: "req".into(),
                 status_url: None,
             })
@@ -469,7 +469,7 @@ mod tests {
         // silently reverts is worse than one that visibly fails.
         let store = Arc::new(MemStore::default());
         let client: Arc<dyn ProviderClient> = Arc::new(ScriptedClient::new(vec![Ok(PollResult {
-            status: halation_core::JobStatus::InProgress,
+            status: hickeyfield_core::JobStatus::InProgress,
             outputs: vec![],
             fail_reason: None,
             actual_usd: None,
@@ -496,7 +496,7 @@ mod tests {
     fn a_live_job_is_still_written() {
         // The other half: the tombstone must not suppress ordinary progress.
         let (store, updates) = run(vec![Ok(PollResult {
-            status: halation_core::JobStatus::Completed,
+            status: hickeyfield_core::JobStatus::Completed,
             outputs: vec![],
             fail_reason: None,
             actual_usd: None,

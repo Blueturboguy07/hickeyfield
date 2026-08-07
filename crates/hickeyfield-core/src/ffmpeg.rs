@@ -1,7 +1,7 @@
 //! The FFmpeg sidecar: finding it, probing it, licence-checking it, and reading
 //! its progress.
 //!
-//! Halation ships a **static** FFmpeg per target as a Tauri `externalBin`.
+//! Hickeyfield ships a **static** FFmpeg per target as a Tauri `externalBin`.
 //! Static matters: dynamic builds fail dylib resolution once they are inside an
 //! `.app` bundle, and the failure surfaces as a generic spawn error long after
 //! the user has installed.
@@ -13,7 +13,7 @@
 //! ## Licensing is a hard constraint, not a footnote
 //!
 //! Default FFmpeg is LGPL-2.1+. `--enable-gpl` (which we need for libx264)
-//! makes it GPL-2.0+, which is fine: Halation is AGPL-3.0-or-later, FFmpeg's
+//! makes it GPL-2.0+, which is fine: Hickeyfield is AGPL-3.0-or-later, FFmpeg's
 //! "or later" reaches GPL-3, and AGPL-3 §13 explicitly permits the combination.
 //! **`--enable-nonfree` makes the binary legally unredistributable.** A build
 //! configured that way cannot ship in our installer at all, so [`licence_check`]
@@ -468,7 +468,7 @@ fn run(bin: &Path, args: &[&str]) -> Result<String, FfmpegError> {
 
 /// One progress sample from `-progress pipe:1`.
 ///
-/// This is the one place in Halation where a real percentage is honest. A
+/// This is the one place in Hickeyfield where a real percentage is honest. A
 /// generation has no knowable total, so its UI shows elapsed time and a phase;
 /// a render has a duration we computed ourselves, so [`Progress::percent`] is a
 /// measurement rather than a guess.
@@ -856,9 +856,9 @@ Encoders:
 
     #[test]
     fn locate_reports_where_it_looked() {
-        let err = locate(Path::new("/nonexistent-halation-dir")).unwrap_err();
+        let err = locate(Path::new("/nonexistent-hickeyfield-dir")).unwrap_err();
         let msg = err.to_string();
         assert!(msg.contains("ffmpeg-"), "{msg}");
-        assert!(msg.contains("/nonexistent-halation-dir"), "{msg}");
+        assert!(msg.contains("/nonexistent-hickeyfield-dir"), "{msg}");
     }
 }

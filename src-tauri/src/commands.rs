@@ -8,9 +8,9 @@
 use crate::app::AppState;
 use crate::runner::now_secs;
 use crate::vault::{self, KeyState};
-use halation_core::clients::{detect_local, LocalEndpoints};
-use halation_core::engine::{JobSet, JobStore};
-use halation_core::{registry, Billable, Estimate, ProviderId, RoutePolicy};
+use hickeyfield_core::clients::{detect_local, LocalEndpoints};
+use hickeyfield_core::engine::{JobSet, JobStore};
+use hickeyfield_core::{registry, Billable, Estimate, ProviderId, RoutePolicy};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
@@ -63,8 +63,8 @@ pub fn local_endpoints() -> LocalEndpoints {
 /// Everything the onboarding screen needs: where to get each key, what it
 /// unlocks, and which one to start with.
 #[tauri::command]
-pub fn provider_info() -> Vec<halation_core::ProviderInfo> {
-    halation_core::all_provider_info()
+pub fn provider_info() -> Vec<hickeyfield_core::ProviderInfo> {
+    hickeyfield_core::all_provider_info()
 }
 
 /// Make a real authenticated read against the provider. "Key is set" and "key
@@ -90,7 +90,7 @@ pub struct ImportReport {
 /// happens to arrive as one string.
 #[tauri::command]
 pub fn import_env(text: String) -> Result<ImportReport, String> {
-    let parsed = halation_core::parse_env(&text);
+    let parsed = hickeyfield_core::parse_env(&text);
     let mut imported = Vec::new();
     for k in parsed.keys {
         let Some(p) = ProviderId::from_slug(&k.provider) else {
@@ -132,7 +132,7 @@ pub struct RouteDto {
 /// Built from the model's own capabilities rather than written by hand for 68
 /// models, so it cannot drift from what the model actually accepts. The picker
 /// previously printed the raw slug here, which tells a user nothing.
-fn model_subtitle(m: &halation_core::Model) -> Option<String> {
+fn model_subtitle(m: &hickeyfield_core::Model) -> Option<String> {
     let caps = m.spec.capabilities();
     let mut bits: Vec<String> = Vec::new();
 
@@ -199,7 +199,7 @@ fn route_state(provider: ProviderId, slug: &str, configured: &[String]) -> (bool
     // Measured absent from the provider entirely. Offering it spends a click
     // and a round trip to learn what we already know — which is how
     // `fal-ai/wan/v2.6` reached a user as `404 Path /v2.6/video-to-video`.
-    if provider == ProviderId::Fal && halation_core::media::route_is_missing(slug) {
+    if provider == ProviderId::Fal && hickeyfield_core::media::route_is_missing(slug) {
         return (
             false,
             Some("fal does not serve this model — try another route".to_string()),
@@ -209,7 +209,7 @@ fn route_state(provider: ProviderId, slug: &str, configured: &[String]) -> (bool
         return (
             false,
             Some(format!(
-                "Halation has no client for {} yet",
+                "Hickeyfield has no client for {} yet",
                 provider.display_name()
             )),
         );
@@ -250,8 +250,8 @@ impl CapabilitiesDto {
     /// `Support::Unknown` also renders nothing — the predecessor of this type
     /// filled unknowns with plausible defaults and that is precisely how the
     /// chip row came to offer 10s on a 5s-only model.
-    fn from_capability(c: &halation_core::capability::ModelCapability) -> Self {
-        use halation_core::capability::Axis;
+    fn from_capability(c: &hickeyfield_core::capability::ModelCapability) -> Self {
+        use hickeyfield_core::capability::Axis;
         let num = |a: &Axis| -> Vec<f64> {
             a.values
                 .iter()
@@ -276,8 +276,8 @@ impl CapabilitiesDto {
     }
 }
 
-impl From<halation_core::catalog::Capabilities> for CapabilitiesDto {
-    fn from(c: halation_core::catalog::Capabilities) -> Self {
+impl From<hickeyfield_core::catalog::Capabilities> for CapabilitiesDto {
+    fn from(c: hickeyfield_core::catalog::Capabilities) -> Self {
         CapabilitiesDto {
             supports_duration: c.supports_duration,
             durations: c.durations,
@@ -322,7 +322,7 @@ pub struct UseCaseDto {
 
 #[tauri::command]
 pub fn list_use_cases() -> Vec<UseCaseDto> {
-    halation_core::UseCase::ALL
+    hickeyfield_core::UseCase::ALL
         .into_iter()
         .map(|u| UseCaseDto {
             slug: u.slug().to_string(),
@@ -358,15 +358,15 @@ pub fn list_models() -> Vec<ModelDto> {
 /// every tab showed every model.
 #[tauri::command]
 pub fn models_for_use_case(use_case: String) -> Vec<ModelDto> {
-    models_matching(halation_core::UseCase::from_slug(&use_case))
+    models_matching(hickeyfield_core::UseCase::from_slug(&use_case))
 }
 
-fn models_matching(use_case: Option<halation_core::UseCase>) -> Vec<ModelDto> {
+fn models_matching(use_case: Option<hickeyfield_core::UseCase>) -> Vec<ModelDto> {
     let configured = configured_providers();
     let mut models: Vec<ModelDto> = registry()
         .into_values()
         .filter(|m| match use_case {
-            Some(uc) => halation_core::use_case::supports(m, uc),
+            Some(uc) => hickeyfield_core::use_case::supports(m, uc),
             None => true,
         })
         .map(|m| ModelDto {
@@ -422,8 +422,8 @@ pub struct PresetDto {
 /// schema is public, so these are real and complete today.
 #[tauri::command]
 pub fn list_presets() -> Vec<PresetDto> {
-    halation_core::camera::slugs()
-        .filter_map(halation_core::camera::get)
+    hickeyfield_core::camera::slugs()
+        .filter_map(hickeyfield_core::camera::get)
         .map(|t| PresetDto {
             id: t.slug.to_string(),
             display_name: t.display_name.to_string(),
@@ -447,7 +447,7 @@ pub fn model_capabilities(
     route_id: Option<String>,
     #[allow(non_snake_case)] hasMedia: Option<bool>,
 ) -> Result<CapabilitiesDto, String> {
-    use halation_core::media::InputMode;
+    use hickeyfield_core::media::InputMode;
 
     let reg = registry();
     let model = reg
@@ -469,12 +469,12 @@ pub fn model_capabilities(
         InputMode::Text
     };
 
-    let cap = halation_core::capability::for_route(
+    let cap = hickeyfield_core::capability::for_route(
         &model.spec,
         route.provider,
         &route.slug,
         mode,
-        halation_core::fal_schema::for_endpoint,
+        hickeyfield_core::fal_schema::for_endpoint,
     );
     Ok(CapabilitiesDto::from_capability(&cap))
 }
@@ -634,7 +634,7 @@ pub struct SubmitInput {
     /// can only do text-to-video, which is a different and much smaller
     /// product than the one being cloned.
     #[serde(default)]
-    pub media: Vec<halation_core::MediaRef>,
+    pub media: Vec<hickeyfield_core::MediaRef>,
     /// Ollama tag to rewrite with. `None` sends the prompt as written.
     #[serde(default)]
     pub rewriter: Option<String>,
@@ -669,7 +669,7 @@ pub fn submit_job(state: State<'_, AppState>, input: SubmitInput) -> Result<Stri
     )?;
 
     let billable = Billable::from(&input.settings);
-    let route = halation_core::route::resolve(
+    let route = hickeyfield_core::route::resolve(
         &model.routes,
         &available,
         RoutePolicy::Cheapest,
@@ -687,7 +687,7 @@ pub fn submit_job(state: State<'_, AppState>, input: SubmitInput) -> Result<Stri
         route_id: route.id(),
         request_id: String::new(),
         endpoint: String::new(),
-        status: halation_core::JobStatus::Queued,
+        status: hickeyfield_core::JobStatus::Queued,
         // The user's own words are stored as the prompt; the compiled and
         // rewritten string is what goes over the wire. Keeping both is what
         // lets the meta rail show the second chip honestly.
@@ -718,7 +718,7 @@ pub fn submit_job(state: State<'_, AppState>, input: SubmitInput) -> Result<Stri
             Ok(id)
         }
         Err(e) => {
-            job.status = halation_core::JobStatus::Failed;
+            job.status = hickeyfield_core::JobStatus::Failed;
             job.fail_reason = Some(e.to_string());
             job.updated_at = now_secs();
             let _ = state.store.upsert(&job);
@@ -779,7 +779,7 @@ pub fn reveal_result(state: State<'_, AppState>, path: String) -> Result<(), Str
         .canonicalize()
         .map_err(|e| format!("could not find {path}: {e}"))?;
     if !canonical.starts_with(&root) {
-        return Err("that file is not in the Halation library".into());
+        return Err("that file is not in the Hickeyfield library".into());
     }
     tauri_plugin_opener::reveal_item_in_dir(&canonical).map_err(|e| e.to_string())
 }
@@ -1036,7 +1036,7 @@ mod tests {
 
     #[test]
     fn a_subtitle_describes_the_model_rather_than_repeating_its_slug() {
-        let reg = halation_core::registry::registry();
+        let reg = hickeyfield_core::registry::registry();
         let sd = model_subtitle(&reg["seedance_2_0"]).unwrap();
         assert!(sd.contains("up to 4k"), "got: {sd}");
         assert!(!sd.contains("fal-ai"), "subtitle must not be a slug: {sd}");
@@ -1045,7 +1045,7 @@ mod tests {
     #[test]
     fn most_models_get_a_subtitle() {
         // If this collapses, the picker is back to showing raw slugs.
-        let reg = halation_core::registry::registry();
+        let reg = hickeyfield_core::registry::registry();
         let with = reg.values().filter(|m| model_subtitle(m).is_some()).count();
         assert_eq!(with, reg.len(), "every model must describe itself");
         // And none of them may fall back to printing a slug.
@@ -1059,7 +1059,7 @@ mod tests {
     fn a_model_that_needs_an_image_says_so() {
         // The single most common first-submit failure is a missing required
         // input, and the picker is where it is cheapest to prevent.
-        let reg = halation_core::registry::registry();
+        let reg = hickeyfield_core::registry::registry();
         let needy: Vec<_> = reg
             .values()
             .filter(|m| model_subtitle(m).is_some_and(|s| s.contains("needs ")))
@@ -1108,7 +1108,7 @@ mod tests {
             .flat_map(|m| m.routes.iter())
             .map(|r| r.slug.as_str())
             .collect();
-        for slug in halation_core::media::FAL_MISSING_ROUTES {
+        for slug in hickeyfield_core::media::FAL_MISSING_ROUTES {
             assert!(
                 known.contains(slug),
                 "{slug} is not a route in the registry"

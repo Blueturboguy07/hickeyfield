@@ -77,7 +77,7 @@ const MAX_REFERENCES = 7;
  * turns a deliberate decision into a nag. The Generate button still says the
  * app is unconfigured, so nothing is hidden — see GenerateButton.
  */
-const SKIP_KEY = "halation.onboarding.skipped";
+const SKIP_KEY = "hickeyfield.onboarding.skipped";
 
 const readSkipped = (): boolean => {
   try {
@@ -499,7 +499,7 @@ export default function App() {
   return (
     <div className="shell">
       <header className="titlebar" data-tauri-drag-region>
-        <span className="wordmark">HALATION</span>
+        <span className="wordmark">HICKEYFIELD</span>
         <span className="titlebar-meta">
           {runningCount > 0 ? (
             <span className="titlebar-running">{runningCount} running</span>

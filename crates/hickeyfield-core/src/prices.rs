@@ -23,7 +23,7 @@
 //! is true of the **HTML** site and false of the **JSON** API, and the fix is
 //! not the one the plan assumed. Measured on 2026-08-05:
 //!
-//! | Request | `halation/0.1.0` UA | Chrome UA |
+//! | Request | `hickeyfield/0.1.0` UA | Chrome UA |
 //! |---|---|---|
 //! | `https://fal.ai/models` (HTML) | 429 challenge | 429 challenge |
 //! | `https://fal.ai/api/models` (JSON) | 200 | 200 |
@@ -2274,7 +2274,7 @@ mod tests {
 
     // -- live feeds (network; excluded from the default run) --------------
 
-    /// Run with `cargo test -p halation-core -- --ignored`. Kept out of the
+    /// Run with `cargo test -p hickeyfield-core -- --ignored`. Kept out of the
     /// default run so `cargo test` stays offline and fast, and out of CI's
     /// required set so a provider outage cannot redden an unrelated PR.
     #[test]

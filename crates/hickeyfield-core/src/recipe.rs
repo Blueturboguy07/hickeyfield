@@ -393,7 +393,7 @@ pub struct Recipe {
     pub media: Vec<MediaRef>,
     /// Which prompt rewriter produced [`Recipe::prompt`], when one did.
     ///
-    /// `None` on every recipe Halation writes today, because no rewriter exists
+    /// `None` on every recipe Hickeyfield writes today, because no rewriter exists
     /// yet (BRIDGE.md §4 item 8) — so there is no version to record, and a
     /// string invented here would make a hand-typed prompt look enhanced. The
     /// field is present now rather than later because the same prompt through a
@@ -403,7 +403,7 @@ pub struct Recipe {
     pub enhancer_version: Option<String>,
     /// Fields this build does not know about, carried through untouched.
     ///
-    /// Without this, opening a recipe written by a newer Halation and saving it
+    /// Without this, opening a recipe written by a newer Hickeyfield and saving it
     /// again would quietly delete whatever that build recorded — the user's own
     /// data, destroyed by an upgrade they did not make.
     #[serde(flatten)]
@@ -512,7 +512,7 @@ impl Recipe {
 pub enum RecipeError {
     /// Not a recipe, or not valid JSON.
     Malformed(String),
-    /// Written by a newer Halation.
+    /// Written by a newer Hickeyfield.
     UnsupportedVersion { found: u32, supported: u32 },
 }
 
@@ -522,11 +522,11 @@ impl fmt::Display for RecipeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             RecipeError::Malformed(why) => {
-                write!(f, "this file is not a Halation recipe: {why}")
+                write!(f, "this file is not a Hickeyfield recipe: {why}")
             }
             RecipeError::UnsupportedVersion { found, supported } => write!(
                 f,
-                "this recipe is version {found} and this build reads up to {supported} — update Halation to open it"
+                "this recipe is version {found} and this build reads up to {supported} — update Hickeyfield to open it"
             ),
         }
     }
@@ -1122,7 +1122,7 @@ mod tests {
             matches!(err, RecipeError::UnsupportedVersion { .. }),
             "got {err:?}"
         );
-        assert!(err.to_string().contains("update Halation"), "got: {err}");
+        assert!(err.to_string().contains("update Hickeyfield"), "got: {err}");
     }
 
     #[test]
