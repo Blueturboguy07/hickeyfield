@@ -111,7 +111,7 @@ impl MediaRole {
 /// | role | Higgsfield CLI | fal |
 /// |---|---|---|
 /// | start | `start_image` / `image` | `image_url` |
-/// | end | `end_image` | `tail_image_url` *(Kling)*, `end_image_url` *(MiniMax/Hailuo)*, `last_frame_url` *(Wan VACE)* |
+/// | end | `end_image` | `tail_image_url` *(Kling)*, `end_image_url` *(MiniMax/Hailuo, Seedance)*, `last_frame_url` *(Wan VACE)* |
 /// | reference | `image_references` | `image_urls`, `ref_image_urls` *(Wan VACE)* |
 /// | video | `video` | `video_url` |
 /// | audio | `audio` | `audio_url` |
@@ -173,7 +173,7 @@ fn fal_keys(role: MediaRole, slug: &str) -> &'static [&'static str] {
         MediaRole::End => {
             if vace {
                 &["last_frame_url"]
-            } else if slug.contains("minimax") || slug.contains("hailuo") {
+            } else if slug.contains("minimax") || slug.contains("hailuo") || slug.contains("seedance") {
                 &["end_image_url"]
             } else {
                 // Kling's spelling, and the most common one.
@@ -1150,6 +1150,27 @@ mod tests {
         )
         .unwrap();
         assert!(body["image_urls"].is_array(), "got: {body:?}");
+    }
+
+    #[test]
+    fn seedance_end_frame_is_end_image_url_not_kling_tail() {
+        // Seedance was not in the minimax/hailuo allowlist, so its end frame
+        // fell through to `tail_image_url` — Kling's spelling, which none of
+        // the bytedance/seedance endpoints declare. fal drops unknown fields
+        // rather than rejecting them, so a start+end request would silently
+        // generate from the start frame alone and look like it worked: no
+        // error, no warning, just a clip that quietly ignored its end frame.
+        // Read off fal's live schema on 2026-08-18 for all four
+        // bytedance/seedance endpoints; none use `tail_image_url`.
+        for slug in [
+            "fal-ai/bytedance/seedance/v1.5/pro",
+            "fal-ai/bytedance/seedance/v1/pro",
+            "bytedance/seedance-2.0",
+            "bytedance/seedance-2.0/fast",
+            "bytedance/seedance-2.0/mini",
+        ] {
+            assert_eq!(fal_keys(MediaRole::End, slug), ["end_image_url"], "{slug}");
+        }
     }
 
     #[test]
