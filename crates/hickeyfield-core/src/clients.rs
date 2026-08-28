@@ -297,7 +297,26 @@ impl ProviderClient for HiggsfieldClient {
                 .header("Authorization", self.auth())
                 .header("Accept", "application/json")
                 .json(body),
-        )?;
+        )
+        // `model_not_found` is not a typo in our slug: the API-key platform
+        // serves only the ~50 fal-shaped paths in its OpenAPI spec (verified
+        // 2026-08-13), and the Studio compilers, Soul compositions, 3D family
+        // and explainers exist only behind their logged-in product gateway
+        // (fnf-api-gw, Clerk OAuth) — no key pair reaches them. Saying that is
+        // more useful than relaying the raw 404.
+        .map_err(|e| match &e {
+            JobError::Permanent(msg) | JobError::Transient(msg)
+                if msg.contains("model_not_found") =>
+            {
+                JobError::Permanent(format!(
+                    "Higgsfield's API platform does not serve `{model_id}` — an API key only \
+                     reaches their fal-style model paths, and this surface exists only inside \
+                     their logged-in web app. Pick a different model for this job; for editing \
+                     a clip, Grok Edit Video, Ray2 Modify and Wan VACE run via fal."
+                ))
+            }
+            _ => e,
+        })?;
         let request_id = v
             .get("request_id")
             .and_then(Value::as_str)
@@ -543,8 +562,9 @@ impl Uploader for FalClient {
 }
 
 impl Uploader for HiggsfieldClient {
-    /// `POST /files/generate-upload-url {content_type}` → `{public_url, upload_url}`,
-    /// then `PUT upload_url`. Verified against their published API surface.
+    /// `POST /files/generate-upload-url {content_type}` → `{public_url, upload_url,
+    /// upload_headers}`, then `PUT upload_url`. Verified against their published
+    /// API surface.
     ///
     /// Note the response field is `public_url`, not fal's `file_url`; reading
     /// the wrong one yields `None` and an upload that appears to succeed while
@@ -572,10 +592,22 @@ impl Uploader for HiggsfieldClient {
             .ok_or_else(|| format!("Higgsfield returned no public_url: {init}"))?
             .to_string();
 
-        let resp = http()
-            .map_err(|e| e.to_string())?
-            .put(upload_url)
-            .header("Content-Type", content_type)
+        // The presigned URL is signed over every header in `upload_headers` —
+        // Content-Type plus `x-amz-tagging: retention=temporary` today. A PUT
+        // that carries only Content-Type fails S3's signature check, which
+        // surfaces as an opaque 403.
+        let mut req = http().map_err(|e| e.to_string())?.put(upload_url);
+        match init.get("upload_headers").and_then(Value::as_object) {
+            Some(headers) => {
+                for (name, value) in headers {
+                    if let Some(v) = value.as_str() {
+                        req = req.header(name.as_str(), v);
+                    }
+                }
+            }
+            None => req = req.header("Content-Type", content_type),
+        }
+        let resp = req
             .body(bytes)
             .send()
             .map_err(|e| format!("upload failed: {e}"))?;

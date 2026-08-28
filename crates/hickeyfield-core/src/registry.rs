@@ -533,6 +533,27 @@ fn higgsfield_only(slug: &str, note: &str) -> Vec<(Route, CostModel)> {
     )]
 }
 
+/// A *second* route on the user's own Higgsfield key, for a model a third party
+/// also serves.
+///
+/// Distinct from [`higgsfield_only`], which says "your key is the only way in".
+/// This one says "your key is another way in", and it exists because their
+/// key-pair platform carries ~20 third-party families that the fal-anchored
+/// table above already prices — verified against their live `openapi.json` on
+/// 2026-08-28. A user paying for a Higgsfield plan was previously forced to
+/// spend fal cash on models their subscription already covers.
+///
+/// Always [`CostModel::Unknown`]: these bill in Higgsfield credits, and a
+/// credit is $0.030-$0.075 depending on plan. The resolver therefore sorts
+/// these behind every priced route, so adding one never silently moves a
+/// generation off the cheapest known path — the user has to pin it.
+fn higgsfield_also(slug: &str, note: &str) -> (Route, CostModel) {
+    (
+        Route::noted(ProviderId::Higgsfield, slug, note),
+        CostModel::Unknown,
+    )
+}
+
 const NO_THIRD_PARTY: &str = "unverified route — no third-party API serves this surface; \
      your own Higgsfield key is the only path and their platform API documents only the \
      soul/ and dop/ model paths";
@@ -663,6 +684,15 @@ fn priced_routes(id: &str) -> Vec<(Route, CostModel)> {
                 ),
                 CostModel::Unknown,
             ),
+            // Tier mismatch, stated rather than hidden: their platform carries
+            // only `v1/pro/fast`, so this route is the faster, lower-fidelity
+            // sibling of fal's `v1/pro`. Silently substituting it would be the
+            // same class of harm as quietly downgrading 4k to 720p.
+            higgsfield_also(
+                "bytedance/seedance/v1/pro/fast",
+                "your own Higgsfield key — note this is their pro/FAST tier, not the pro tier \
+                 fal serves; billed in Higgsfield credits, so no USD estimate",
+            ),
         ],
         // The largest arbitrage in the roster, so the default route is inverted:
         // VAIG first, fal second.
@@ -731,6 +761,11 @@ fn priced_routes(id: &str) -> Vec<(Route, CostModel)> {
                 ),
                 per_second(0.042),
             ),
+            higgsfield_also(
+                "kling-video/v2.5-turbo/pro",
+                "your own Higgsfield key, same pro tier fal serves; billed in Higgsfield \
+                 credits, so no USD estimate",
+            ),
         ],
 
         // -- Wan -------------------------------------------------------------
@@ -789,6 +824,11 @@ fn priced_routes(id: &str) -> Vec<(Route, CostModel)> {
                     "identical to fal to the cent",
                 ),
                 per_second(0.10),
+            ),
+            higgsfield_also(
+                "wan-25-preview",
+                "your own Higgsfield key, the same preview build; billed in Higgsfield \
+                 credits, so no USD estimate",
             ),
         ],
         "wan2_2_video" => vec![(
@@ -882,6 +922,10 @@ fn priced_routes(id: &str) -> Vec<(Route, CostModel)> {
                 Route::new(ProviderId::Vaig, "google/veo-3.1-generate-001"),
                 per_second_audio(0.20, 2.0),
             ),
+            higgsfield_also(
+                "veo3.1",
+                "your own Higgsfield key; billed in Higgsfield credits, so no USD estimate",
+            ),
         ],
         "veo3_1_fast" => vec![
             (
@@ -899,6 +943,10 @@ fn priced_routes(id: &str) -> Vec<(Route, CostModel)> {
                     "carried, but fal publishes a price only for the lite tier",
                 ),
                 CostModel::Unknown,
+            ),
+            higgsfield_also(
+                "veo3.1/fast",
+                "your own Higgsfield key; billed in Higgsfield credits, so no USD estimate",
             ),
         ],
         "veo3_1_lite" => vec![
@@ -977,14 +1025,25 @@ fn priced_routes(id: &str) -> Vec<(Route, CostModel)> {
             ),
             (Route::new(ProviderId::Fal, "minimax/h3"), per_second(0.26)),
         ],
-        "minimax_hailuo" => vec![(
-            Route::noted(
-                ProviderId::Fal,
-                "fal-ai/minimax/hailuo-2.3",
-                "pro tier bills a flat rate per video, not per second",
+        // The one model here whose fal route does not exist: `fal-ai/minimax/
+        // hailuo-2.3` is in `media::FAL_MISSING_ROUTES`, measured absent
+        // 2026-08-05. Until now that left the model with no reachable route at
+        // all — the Higgsfield path is the first one that can actually run it.
+        "minimax_hailuo" => vec![
+            (
+                Route::noted(
+                    ProviderId::Fal,
+                    "fal-ai/minimax/hailuo-2.3",
+                    "pro tier bills a flat rate per video, not per second",
+                ),
+                CostModel::Flat { usd: 0.49 },
             ),
-            CostModel::Flat { usd: 0.49 },
-        )],
+            higgsfield_also(
+                "minimax/hailuo-2.3/pro",
+                "your own Higgsfield key — the only route that reaches this model, since fal \
+                 is measured not to serve it; billed in Higgsfield credits, so no USD estimate",
+            ),
+        ],
         "happy_horse_video" => higgsfield_only(
             "happy_horse_video",
             "unverified route — the corpus identifies the vendor as Alibaba but never \
@@ -1010,7 +1069,10 @@ fn priced_routes(id: &str) -> Vec<(Route, CostModel)> {
             (
                 Route::noted(
                     ProviderId::Higgsfield,
-                    "higgsfield-ai/dop/preview",
+                    // `dop/preview` was a 404: their spec publishes lite,
+                    // standard and turbo, and has no preview tier. Corrected
+                    // against the live openapi.json 2026-08-28.
+                    "higgsfield-ai/dop/lite",
                     "the cheaper DoP tier, billed in Higgsfield credits",
                 ),
                 CostModel::Unknown,
@@ -2606,5 +2668,110 @@ mod tests {
             assert_eq!(m.spec.id, m.id);
             assert!(!m.display_name.is_empty(), "{k} has no label");
         }
+    }
+
+    // -- The user's own Higgsfield key as a second route ---------------------
+
+    /// Every model that gained a Higgsfield route alongside a third-party one.
+    const DUAL_ROUTED: [(&str, &str); 6] = [
+        ("seedance_pro", "bytedance/seedance/v1/pro/fast"),
+        ("kling-v2-5-turbo", "kling-video/v2.5-turbo/pro"),
+        ("wan2_5_video", "wan-25-preview"),
+        ("minimax_hailuo", "minimax/hailuo-2.3/pro"),
+        ("veo3_1", "veo3.1"),
+        ("veo3_1_fast", "veo3.1/fast"),
+    ];
+
+    #[test]
+    fn a_higgsfield_key_is_a_second_way_into_models_a_third_party_also_serves() {
+        let reg = registry();
+        for (id, slug) in DUAL_ROUTED {
+            let m = reg.get(id).unwrap_or_else(|| panic!("{id} missing"));
+            let hf = m
+                .routes
+                .iter()
+                .find(|r| r.provider == ProviderId::Higgsfield)
+                .unwrap_or_else(|| panic!("{id} has no Higgsfield route"));
+            assert_eq!(hf.slug, slug, "{id} points at the wrong path");
+            assert!(hf.note.is_some(), "{id}'s Higgsfield route needs a note");
+            assert!(
+                m.routes
+                    .iter()
+                    .any(|r| r.provider != ProviderId::Higgsfield),
+                "{id} is dual-routed, so it must keep a third-party route"
+            );
+        }
+    }
+
+    #[test]
+    fn every_higgsfield_route_is_one_their_spec_actually_publishes() {
+        // The guard for the whole class. `higgsfield-ai/dop/preview` shipped
+        // as a route to a tier that has never existed, and a wrong slug is
+        // indistinguishable from an unreachable surface at the call site: both
+        // answer `model_not_found`, and the client blames their web-app gate.
+        //
+        // Only the measured slugs are checked. The Studio compilers and the 3D
+        // family are deliberately unmeasured — we know their *product* has
+        // them and do not know any path — so absence from the table is not an
+        // error there. What is an error is a slug shaped like a platform path
+        // that the platform does not serve.
+        let reg = registry();
+        for m in reg.values() {
+            for r in &m.routes {
+                if r.provider != ProviderId::Higgsfield || !r.slug.contains('/') {
+                    continue;
+                }
+                assert!(
+                    crate::media::higgsfield_is_measured(&r.slug),
+                    "{}'s route {} looks like a platform path but is not in their spec",
+                    m.id,
+                    r.slug
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn a_higgsfield_route_never_silently_takes_a_generation() {
+        // These bill in credits, so they are Unknown, and the resolver sorts
+        // Unknown last. Adding one must never move a user off a priced route
+        // they were already getting — they have to pin it deliberately.
+        let reg = registry();
+        let b = Billable::video(5.0, 1280, 720);
+        for (id, _) in DUAL_ROUTED {
+            let m = &reg[id];
+            let hf = m
+                .routes
+                .iter()
+                .find(|r| r.provider == ProviderId::Higgsfield)
+                .unwrap();
+            assert!(
+                m.estimate(hf, &b).is_none(),
+                "{id}: a credit-billed route must not quote USD"
+            );
+        }
+    }
+
+    #[test]
+    fn hailuo_23_finally_has_a_route_that_exists() {
+        // Its only route was `fal-ai/minimax/hailuo-2.3`, measured absent from
+        // fal — the model was unreachable by any path until the Higgsfield one.
+        let reg = registry();
+        let m = &reg["minimax_hailuo"];
+        let fal = m
+            .routes
+            .iter()
+            .find(|r| r.provider == ProviderId::Fal)
+            .unwrap();
+        assert!(
+            crate::media::route_is_missing(&fal.slug),
+            "if fal now serves hailuo-2.3 this test's premise is stale"
+        );
+        assert!(
+            m.routes
+                .iter()
+                .any(|r| r.provider == ProviderId::Higgsfield),
+            "hailuo-2.3 would have no reachable route at all"
+        );
     }
 }

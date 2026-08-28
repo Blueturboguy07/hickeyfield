@@ -223,6 +223,35 @@ fn route_state(provider: ProviderId, slug: &str, configured: &[String]) -> (bool
     (true, None)
 }
 
+/// The same question, narrowed to one job.
+///
+/// A route can be perfectly configured and still be the wrong way to do *this*
+/// piece of work: `fal-ai/veo3.1` takes no media, so under Animate Image it is
+/// unusable even though the model belongs there — its Higgsfield sibling
+/// `/veo3.1/image-to-video` is what serves that tab. Marking it here is what
+/// stops the picker handing over a default route that fails at submit.
+fn route_state_for_job(
+    model: &hickeyfield_core::Model,
+    route: &hickeyfield_core::route::Route,
+    use_case: Option<hickeyfield_core::UseCase>,
+    configured: &[String],
+) -> (bool, Option<String>) {
+    let (available, why) = route_state(route.provider, &route.slug, configured);
+    if !available {
+        return (available, why);
+    }
+    match use_case {
+        Some(uc) if !hickeyfield_core::use_case::route_serves(model, route, uc) => (
+            false,
+            Some(format!(
+                "{} cannot do this job — pick another route",
+                route.provider.display_name()
+            )),
+        ),
+        _ => (true, None),
+    }
+}
+
 /// Per-model option sets, derived from the model's own declared flags.
 ///
 /// `supports_*` and the list are separate facts: an empty list with support
@@ -382,7 +411,7 @@ fn models_matching(use_case: Option<hickeyfield_core::UseCase>) -> Vec<ModelDto>
                 .iter()
                 .map(|r| {
                     let (available, unavailable_reason) =
-                        route_state(r.provider, &r.slug, &configured);
+                        route_state_for_job(&m, r, use_case, &configured);
                     RouteDto {
                         id: r.id(),
                         provider: r.provider.slug().to_string(),

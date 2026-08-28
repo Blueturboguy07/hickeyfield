@@ -182,7 +182,12 @@ pub fn submit_to_provider(
     // Higgsfield's CLI, so it is only correct when we are actually talking to
     // Higgsfield; everything routed through fal needs fal's names.
     let dialect = match route.provider {
-        ProviderId::Higgsfield => hickeyfield_core::media::Dialect::Catalog,
+        // ...except on the paths where Higgsfield mirrors fal, which take
+        // fal's `image_url` rather than the CLI's `start_image`. Posting the
+        // catalogue's names there is a 422 on every image-to-video call.
+        ProviderId::Higgsfield if !hickeyfield_core::media::higgsfield_speaks_fal(&route.slug) => {
+            hickeyfield_core::media::Dialect::Catalog
+        }
         _ => hickeyfield_core::media::Dialect::Fal,
     };
 
@@ -271,8 +276,8 @@ pub fn submit_to_provider(
     // fal splits a logical model across one endpoint per input mode and the
     // registry stores only the family root, so the bare slug 404s for 17 of 36
     // routes. Deduce the mode from what the user actually attached.
-    let endpoint = if route.provider == ProviderId::Fal {
-        hickeyfield_core::media::resolve_endpoint(
+    let endpoint = match route.provider {
+        ProviderId::Fal => hickeyfield_core::media::resolve_endpoint(
             &route.slug,
             hickeyfield_core::media::InputMode::of(media),
             model.modality == hickeyfield_core::Modality::Video,
@@ -280,9 +285,17 @@ pub fn submit_to_provider(
         // Refused here rather than at the provider: we already know which modes
         // the route serves, and a 404 after a round trip tells the user nothing
         // they can act on.
-        .map_err(|e| JobError::Permanent(format!("{} — {e}", model.display_name)))?
-    } else {
-        route.slug.clone()
+        .map_err(|e| JobError::Permanent(format!("{} — {e}", model.display_name)))?,
+        // Higgsfield splits the same way, and their split does not match fal's:
+        // `/veo3.1` is their text endpoint where fal's `veo3.1` takes no media
+        // at all. Same treatment, its own table.
+        ProviderId::Higgsfield => hickeyfield_core::media::resolve_higgsfield_endpoint(
+            &route.slug,
+            hickeyfield_core::media::InputMode::of(media),
+            model.modality == hickeyfield_core::Modality::Video,
+        )
+        .map_err(|e| JobError::Permanent(format!("{} — {e}", model.display_name)))?,
+        _ => route.slug.clone(),
     };
 
     // Recorded before the call so a failure still shows what we tried, and so

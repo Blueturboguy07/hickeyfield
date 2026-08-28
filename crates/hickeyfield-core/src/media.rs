@@ -810,6 +810,146 @@ pub fn resolve_endpoint(
     }
 }
 
+// ---------------------------------------------------------------------------
+// Higgsfield's own key-pair platform
+// ---------------------------------------------------------------------------
+
+/// Which input modes `platform.higgsfield.ai` serves, per family root.
+///
+/// Read from `https://docs.higgsfield.ai/docs/openapi.json` on 2026-08-28: 47
+/// model paths, and the third-party families among them are consistently **one
+/// version behind** the picker (Kling 2.1/2.5 against our 2.6/3.0, Wan 2.5
+/// against our 2.6/2.7, Hailuo 02/2.3 against our H3). That is why this table
+/// is short: it lists only the families where a slug in the registry and a path
+/// in their spec are the same model, not every path they publish.
+///
+/// Separate from [`FAL_ROUTE_MODES`] because the two providers disagree about
+/// the same family. fal's `veo3.1` is a complete endpoint that takes no media
+/// at all; Higgsfield's `/veo3.1` is the *text* endpoint and `/veo3.1/
+/// image-to-video` sits beside it. Sharing one table would have to lie about
+/// one of them.
+///
+/// An empty mode list means the path is complete and must not be suffixed —
+/// same convention as the fal table, and what keeps the pre-existing DoP and
+/// Soul routes passing through untouched.
+const HIGGSFIELD_ROUTE_MODES: [(&str, Exact, &[InputMode]); 9] = [
+    (
+        "bytedance/seedance/v1/pro/fast",
+        false,
+        &[InputMode::Text, InputMode::Image],
+    ),
+    (
+        "kling-video/v2.5-turbo/pro",
+        false,
+        &[InputMode::Text, InputMode::Image],
+    ),
+    (
+        "minimax/hailuo-2.3/pro",
+        false,
+        &[InputMode::Text, InputMode::Image],
+    ),
+    (
+        "wan-25-preview",
+        false,
+        &[InputMode::Text, InputMode::Image],
+    ),
+    ("veo3.1", false, &[InputMode::Text, InputMode::Image]),
+    ("veo3.1/fast", false, &[InputMode::Text, InputMode::Image]),
+    // Complete paths, no mode axis. Listed so they are documented as checked
+    // rather than merely unmeasured.
+    ("higgsfield-ai/dop/standard", true, &[]),
+    ("higgsfield-ai/dop/lite", true, &[]),
+    ("higgsfield-ai/soul/standard", true, &[]),
+];
+
+/// Families whose **text** path is the bare root rather than a suffix.
+///
+/// Veo is the only one, and it is not derivable: `/veo3.1/image-to-video`
+/// exists, so the family reads like every other root, but `/veo3.1/
+/// text-to-video` is a 404 — `/veo3.1` itself is the text endpoint. Suffixing
+/// uniformly would break exactly the two Veo routes and nothing else, which is
+/// the hardest kind of bug to see.
+const HIGGSFIELD_BARE_TEXT: [&str; 2] = ["veo3.1", "veo3.1/fast"];
+
+fn higgsfield_entry(slug: &str) -> Option<(Exact, &'static [InputMode])> {
+    HIGGSFIELD_ROUTE_MODES
+        .iter()
+        .find(|(s, _, _)| *s == slug)
+        .map(|(_, e, m)| (*e, *m))
+}
+
+/// Resolve a Higgsfield family root into the path this request can be posted to.
+///
+/// The counterpart to [`resolve_endpoint`], which speaks only fal. A slug this
+/// table has never heard of passes through unchanged rather than erroring: the
+/// Soul and DoP routes predate the table and must keep working, and an unknown
+/// slug costs one 404 and no money.
+pub fn resolve_higgsfield_endpoint(
+    slug: &str,
+    mode: InputMode,
+    produces_video: bool,
+) -> Result<String, UnsupportedMode> {
+    match higgsfield_entry(slug) {
+        // Their spec says this family does not serve this mode. Refusing here
+        // is the whole point of the table — the alternative is a round trip
+        // that answers `model_not_found`, which reads as "your key is wrong".
+        Some((_, modes)) if !modes.is_empty() && !modes.contains(&mode) => Err(UnsupportedMode {
+            wanted: mode,
+            supported: modes,
+        }),
+        Some((true, _)) => Ok(slug.to_string()),
+        Some((_, _)) if mode == InputMode::Text && HIGGSFIELD_BARE_TEXT.contains(&slug) => {
+            Ok(slug.to_string())
+        }
+        Some((_, _)) => Ok(format!("{slug}{}", mode.suffix(produces_video))),
+        None => Ok(slug.to_string()),
+    }
+}
+
+/// True when this slug appears in Higgsfield's published spec at all.
+///
+/// The guard for the `dop/preview` class of bug: that route sat in the registry
+/// quoting a tier their platform has never had (they publish lite, standard and
+/// turbo), so every generation on it 404'd with `model_not_found` — which the
+/// client then reported as "this surface exists only inside their web app".
+/// A wrong slug and an unreachable surface are indistinguishable from the
+/// outside, so the only place to catch one is here.
+pub fn higgsfield_is_measured(slug: &str) -> bool {
+    higgsfield_entry(slug).is_some()
+}
+
+/// True when this Higgsfield path speaks **fal's** parameter vocabulary.
+///
+/// Their key-pair platform is a fal-shaped mirror, and the shape goes deeper
+/// than the slugs: `POST /kling-video/v2.5-turbo/pro/image-to-video` requires
+/// `prompt` and **`image_url`** — fal's name — not the `start_image` their CLI
+/// uses or the `input_image` our hand-authored specs guessed. Verified against
+/// their `openapi.json` on 2026-08-28 for all five image-to-video mirrors.
+///
+/// So the usual rule inverts for these. [`can_bind`] says the catalogue is the
+/// spec for a Higgsfield route, and that is right for their **in-house**
+/// surfaces — Soul, DoP, popcorn, all under `higgsfield-ai/` — which the CLI
+/// spec genuinely describes. It is wrong for the mirror, where posting
+/// `start_image` is a 422 on every image-to-video call.
+///
+/// Deliberately keyed off the measured table rather than the `higgsfield-ai/`
+/// prefix: the Studio compilers and the 3D family are bare job-set-type names
+/// we have never seen a path for, and guessing fal's vocabulary for them would
+/// invent a wire format.
+pub fn higgsfield_speaks_fal(slug: &str) -> bool {
+    higgsfield_is_measured(slug) && !slug.starts_with("higgsfield-ai/")
+}
+
+/// True when Higgsfield's key-pair platform is measured to serve this slug in
+/// this mode. Used by the picker so a route is not offered for a job it cannot
+/// take.
+pub fn higgsfield_serves(slug: &str, mode: InputMode) -> bool {
+    match higgsfield_entry(slug) {
+        Some((_, modes)) if !modes.is_empty() => modes.contains(&mode),
+        _ => true,
+    }
+}
+
 /// Does this set of attachments include an end frame?
 ///
 /// Lifted out because [`crate::enhance`] needs exactly this question and
@@ -1435,6 +1575,181 @@ mod tests {
         assert!(
             bindable > 20,
             "only {bindable} models can take a start frame — the binding table has drifted"
+        );
+    }
+
+    // -- Higgsfield's own platform ------------------------------------------
+
+    #[test]
+    fn higgsfield_veo_text_is_the_bare_root() {
+        // The trap this table exists for. `/veo3.1/image-to-video` exists, so
+        // the family looks like every other root — but `/veo3.1/text-to-video`
+        // is a 404 and `/veo3.1` is itself the text endpoint.
+        assert_eq!(
+            resolve_higgsfield_endpoint("veo3.1", InputMode::Text, true).unwrap(),
+            "veo3.1"
+        );
+        assert_eq!(
+            resolve_higgsfield_endpoint("veo3.1", InputMode::Image, true).unwrap(),
+            "veo3.1/image-to-video"
+        );
+        assert_eq!(
+            resolve_higgsfield_endpoint("veo3.1/fast", InputMode::Text, true).unwrap(),
+            "veo3.1/fast"
+        );
+        assert_eq!(
+            resolve_higgsfield_endpoint("veo3.1/fast", InputMode::Image, true).unwrap(),
+            "veo3.1/fast/image-to-video"
+        );
+    }
+
+    #[test]
+    fn higgsfield_veo_differs_from_fal_veo() {
+        // Same family name, different shape on each provider — the reason
+        // these are two tables and not one. fal's is complete and media-free.
+        assert!(endpoint_is_exact("fal-ai/veo3.1"));
+        assert!(takes_no_media("fal-ai/veo3.1"));
+        assert_eq!(
+            resolve_higgsfield_endpoint("veo3.1", InputMode::Image, true).unwrap(),
+            "veo3.1/image-to-video"
+        );
+    }
+
+    #[test]
+    fn higgsfield_roots_take_the_mode_suffix() {
+        for (root, want) in [
+            (
+                "bytedance/seedance/v1/pro/fast",
+                "bytedance/seedance/v1/pro/fast/image-to-video",
+            ),
+            (
+                "kling-video/v2.5-turbo/pro",
+                "kling-video/v2.5-turbo/pro/image-to-video",
+            ),
+            (
+                "minimax/hailuo-2.3/pro",
+                "minimax/hailuo-2.3/pro/image-to-video",
+            ),
+            ("wan-25-preview", "wan-25-preview/image-to-video"),
+        ] {
+            assert_eq!(
+                resolve_higgsfield_endpoint(root, InputMode::Image, true).unwrap(),
+                want,
+                "{root} resolved wrong"
+            );
+        }
+    }
+
+    #[test]
+    fn higgsfield_complete_paths_are_never_suffixed() {
+        // DoP and Soul predate the table. Adding it must not change them.
+        for slug in [
+            "higgsfield-ai/dop/standard",
+            "higgsfield-ai/dop/lite",
+            "higgsfield-ai/soul/standard",
+        ] {
+            for mode in [InputMode::Text, InputMode::Image, InputMode::Video] {
+                assert_eq!(
+                    resolve_higgsfield_endpoint(slug, mode, true).unwrap(),
+                    slug,
+                    "{slug} was suffixed"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn higgsfield_refuses_a_mode_it_does_not_serve() {
+        // None of their third-party families take a clip. Refusing here saves
+        // a round trip that would answer `model_not_found` and read as a bad
+        // key rather than a wrong job.
+        let e = resolve_higgsfield_endpoint("kling-video/v2.5-turbo/pro", InputMode::Video, true)
+            .unwrap_err();
+        assert_eq!(e.wanted, InputMode::Video);
+        assert!(e.supported.contains(&InputMode::Image));
+        assert!(!higgsfield_serves(
+            "kling-video/v2.5-turbo/pro",
+            InputMode::Video
+        ));
+        assert!(higgsfield_serves(
+            "kling-video/v2.5-turbo/pro",
+            InputMode::Image
+        ));
+    }
+
+    #[test]
+    fn an_unmeasured_higgsfield_slug_passes_through() {
+        // Soul's siblings and the Studio slugs are not in the table and must
+        // keep reaching the provider — one honest 404 beats hiding a route.
+        assert_eq!(
+            resolve_higgsfield_endpoint("marketing_studio_video", InputMode::Image, true).unwrap(),
+            "marketing_studio_video"
+        );
+        assert!(higgsfield_serves(
+            "marketing_studio_video",
+            InputMode::Image
+        ));
+        assert!(!higgsfield_is_measured("marketing_studio_video"));
+        assert!(higgsfield_is_measured("higgsfield-ai/dop/lite"));
+    }
+
+    #[test]
+    fn the_dop_preview_tier_never_existed() {
+        // The regression guard. Their spec publishes lite/standard/turbo.
+        assert!(!higgsfield_is_measured("higgsfield-ai/dop/preview"));
+    }
+
+    #[test]
+    fn the_higgsfield_mirror_speaks_fal_not_the_catalogue() {
+        // Their platform requires `image_url` on every image-to-video mirror,
+        // read from their openapi.json. The catalogue says `start_image`, and
+        // the hand-authored picker specs say `input_image` — posting either is
+        // a 422.
+        for slug in [
+            "kling-video/v2.5-turbo/pro",
+            "minimax/hailuo-2.3/pro",
+            "bytedance/seedance/v1/pro/fast",
+            "wan-25-preview",
+            "veo3.1",
+            "veo3.1/fast",
+        ] {
+            assert!(higgsfield_speaks_fal(slug), "{slug} is a fal-shaped mirror");
+        }
+        // Their in-house surfaces are the opposite case: the CLI spec really
+        // does describe them.
+        for slug in [
+            "higgsfield-ai/dop/standard",
+            "higgsfield-ai/dop/lite",
+            "higgsfield-ai/soul/standard",
+        ] {
+            assert!(!higgsfield_speaks_fal(slug), "{slug} is in-house");
+        }
+        // And a surface we have never seen a path for must not be guessed at.
+        assert!(!higgsfield_speaks_fal("marketing_studio_video"));
+        assert!(!higgsfield_speaks_fal("cinematic_studio_3_0"));
+    }
+
+    #[test]
+    fn a_mirrored_route_binds_the_field_their_spec_requires() {
+        let spec = spec(vec![media_flag("input_image", Arity::One)]);
+        let media = [MediaRef::new(
+            MediaRole::Start,
+            MediaSource::Url {
+                url: "https://ex/a.png".into(),
+            },
+        )];
+        let body = bind(
+            &spec,
+            "Kling 2.5",
+            &media,
+            Dialect::Fal,
+            "kling-video/v2.5-turbo/pro",
+        )
+        .expect("the mirror takes a start frame");
+        assert_eq!(
+            body.get("image_url").and_then(|v| v.as_str()),
+            Some("https://ex/a.png"),
+            "their openapi requires `image_url`; got {body:?}"
         );
     }
 }
