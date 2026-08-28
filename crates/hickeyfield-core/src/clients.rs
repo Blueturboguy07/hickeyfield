@@ -262,7 +262,12 @@ impl ProviderClient for FalClient {
 // Higgsfield's public API — the only literal-Soul and literal-DoP path
 // ---------------------------------------------------------------------------
 
-/// `platform.higgsfield.ai`.
+/// `api.higgsfield.ai`.
+///
+/// The host is the one their `openapi.json` declares in `servers` and the only
+/// one their docs ever print. We were posting to `platform.higgsfield.ai`,
+/// which appears nowhere in their documentation; both hosts answer 401 to an
+/// unauthenticated request, so the mistake was invisible without a key.
 ///
 /// Two things make this one different. Auth is `Key {key}:{secret}` — a pair,
 /// and not Bearer. And results are deleted after **7 days**, so a job here is
@@ -289,34 +294,76 @@ impl HiggsfieldClient {
     }
 }
 
+/// Turn Higgsfield's own error vocabulary into something actionable.
+///
+/// Quoting their published table verbatim, because every one of these has a
+/// different remedy and the raw `{"detail":"model_disabled"}` has none:
+///
+/// | status | their words | what to do |
+/// |---|---|---|
+/// | 403 | insufficient credits | fund the account |
+/// | 404 | request or model not found **for this account** | verify it exists *and is enabled* |
+/// | 423 | model temporarily blocked | retry later |
+/// | 503 | model disabled or not ready | retry later |
+///
+/// Note 404 and "does not exist" are not the same claim. Their spec publishes
+/// ~47 model paths; an account is provisioned for a subset, and the API cannot
+/// tell you which — the docs say to ask support. So this names the two
+/// possibilities instead of picking one.
+fn higgsfield_reason(model_id: &str, e: JobError) -> JobError {
+    let msg = match &e {
+        JobError::Permanent(m) | JobError::Transient(m) => m.clone(),
+        JobError::Unsupported => return e,
+    };
+    let known = |detail: &str| msg.contains(detail);
+    if known("model_not_found") {
+        return JobError::Permanent(format!(
+            "Higgsfield will not serve `{model_id}` on this account. Their 404 means \"not \
+             found for this account\", so either the path is not one they publish or your plan \
+             does not have this model enabled — their API cannot tell you which, and their docs \
+             say to ask support@higgsfield.ai. Meanwhile any route badged fal will run."
+        ));
+    }
+    if known("model_disabled") {
+        return JobError::Transient(format!(
+            "Higgsfield has `{model_id}` disabled or not ready right now. Their docs class this \
+             as retry-later rather than a permanent refusal, so it may come back — but the fal \
+             route for this model, where there is one, will run today."
+        ));
+    }
+    if known("insufficient_credits") || msg.starts_with("HTTP 403") {
+        return JobError::Permanent(
+            "Higgsfield reports insufficient credits — top up at cloud.higgsfield.ai, or pick a \
+             route badged fal and pay that provider instead."
+                .to_string(),
+        );
+    }
+    if msg.starts_with("HTTP 423") {
+        return JobError::Transient(format!(
+            "Higgsfield has `{model_id}` temporarily blocked. Their docs say retry later."
+        ));
+    }
+    e
+}
+
 impl ProviderClient for HiggsfieldClient {
     fn submit(&self, model_id: &str, body: &Value) -> Result<Submission, JobError> {
         let v = send(
             http()?
-                .post(format!("https://platform.higgsfield.ai/{model_id}"))
+                .post(format!("https://api.higgsfield.ai/{model_id}"))
                 .header("Authorization", self.auth())
                 .header("Accept", "application/json")
                 .json(body),
         )
-        // `model_not_found` is not a typo in our slug: the API-key platform
-        // serves only the ~50 fal-shaped paths in its OpenAPI spec (verified
-        // 2026-08-13), and the Studio compilers, Soul compositions, 3D family
-        // and explainers exist only behind their logged-in product gateway
-        // (fnf-api-gw, Clerk OAuth) — no key pair reaches them. Saying that is
-        // more useful than relaying the raw 404.
-        .map_err(|e| match &e {
-            JobError::Permanent(msg) | JobError::Transient(msg)
-                if msg.contains("model_not_found") =>
-            {
-                JobError::Permanent(format!(
-                    "Higgsfield's API platform does not serve `{model_id}` — an API key only \
-                     reaches their fal-style model paths, and this surface exists only inside \
-                     their logged-in web app. Pick a different model for this job; for editing \
-                     a clip, Grok Edit Video, Ray2 Modify and Wan VACE run via fal."
-                ))
-            }
-            _ => e,
-        })?;
+        // Their error table (docs.higgsfield.ai/docs/concepts/errors) is
+        // explicit that these are **account-scoped**, and the previous message
+        // here was not: it told the user a 404 meant the surface existed only
+        // inside Higgsfield's logged-in web app. That is true of the Studio
+        // compilers and the 3D family, whose paths their spec never publishes
+        // — and false of every path it does, where a 404 means the model is
+        // simply not enabled on this account. Asserting the wrong cause sent a
+        // user hunting a routing bug that was a provisioning question.
+        .map_err(|e| higgsfield_reason(model_id, e))?;
         let request_id = v
             .get("request_id")
             .and_then(Value::as_str)
@@ -336,7 +383,7 @@ impl ProviderClient for HiggsfieldClient {
         let v = send(
             http()?
                 .get(format!(
-                    "https://platform.higgsfield.ai/requests/{request_id}/status"
+                    "https://api.higgsfield.ai/requests/{request_id}/status"
                 ))
                 .header("Authorization", self.auth()),
         )?;
@@ -354,7 +401,7 @@ impl ProviderClient for HiggsfieldClient {
         send(
             http()?
                 .post(format!(
-                    "https://platform.higgsfield.ai/requests/{request_id}/cancel"
+                    "https://api.higgsfield.ai/requests/{request_id}/cancel"
                 ))
                 .header("Authorization", self.auth()),
         )
@@ -576,7 +623,7 @@ impl Uploader for HiggsfieldClient {
         let init = send(
             http()
                 .map_err(|e| e.to_string())?
-                .post("https://platform.higgsfield.ai/files/generate-upload-url")
+                .post("https://api.higgsfield.ai/files/generate-upload-url")
                 .header("Authorization", self.auth())
                 .json(&serde_json::json!({ "content_type": content_type })),
         )
@@ -663,6 +710,9 @@ pub fn detect_local() -> LocalEndpoints {
 
 #[cfg(test)]
 mod tests {
+    /// This file, so a hardcoded host can be asserted on.
+    const SOURCE: &str = include_str!("clients.rs");
+
     use super::*;
 
     #[test]
@@ -903,5 +953,52 @@ mod tests {
     #[test]
     fn a_dot_in_the_body_does_not_eat_the_extension() {
         assert_eq!(safe_upload_name("/tmp/v1.2.final.mov"), "v1_2_final.mov");
+    }
+
+    #[test]
+    fn higgsfield_posts_to_the_host_their_spec_declares() {
+        // `platform.higgsfield.ai` appears nowhere in their documentation; the
+        // `servers` block of their openapi.json and every curl example in the
+        // docs say `api.higgsfield.ai`. Both hosts answer 401 unauthenticated,
+        // so nothing but a live key would have caught this.
+        // Split, or the needle would match itself in this very file.
+        let legacy = concat!("https://", "platform", ".higgsfield.ai");
+        assert!(!SOURCE.contains(legacy), "the legacy host is back");
+        assert!(SOURCE.contains("https://api.higgsfield.ai/{model_id}"));
+    }
+
+    #[test]
+    fn a_higgsfield_404_does_not_claim_to_know_why() {
+        // The message this replaces asserted the surface existed only inside
+        // their logged-in web app. Their own error table says 404 is "request
+        // or model not found *for this account*", which is a different claim
+        // with a different remedy.
+        let e = higgsfield_reason(
+            "veo3.1",
+            JobError::Permanent("HTTP 404: {\"detail\":\"model_not_found\"}".into()),
+        );
+        let msg = e.to_string();
+        assert!(msg.contains("not found for this account"), "got {msg}");
+        assert!(
+            !msg.contains("logged-in web app"),
+            "must not assert a cause their docs contradict: {msg}"
+        );
+        assert!(matches!(e, JobError::Permanent(_)));
+    }
+
+    #[test]
+    fn a_disabled_model_is_retryable_because_their_docs_say_so() {
+        let e = higgsfield_reason(
+            "veo3.1",
+            JobError::Transient("HTTP 503: {\"detail\":\"model_disabled\"}".into()),
+        );
+        assert!(matches!(e, JobError::Transient(_)), "503 is retry-later");
+        assert!(e.to_string().contains("disabled or not ready"));
+    }
+
+    #[test]
+    fn an_unrecognised_higgsfield_error_is_passed_through_untouched() {
+        let e = higgsfield_reason("veo3.1", JobError::Permanent("HTTP 418: teapot".into()));
+        assert_eq!(e.to_string(), "HTTP 418: teapot");
     }
 }

@@ -142,7 +142,7 @@ pub fn validate(provider: ProviderId, key: &str, secret: Option<&str>) -> Valida
             let Some(secret) = secret.filter(|s| !s.trim().is_empty()) else {
                 return Validation::bad("Higgsfield needs both a key and a secret");
             };
-            http.get("https://platform.higgsfield.ai/requests/00000000-0000-0000-0000-000000000000/status")
+            http.get("https://api.higgsfield.ai/requests/00000000-0000-0000-0000-000000000000/status")
                 // Note the shape: `Key k:s`, not Bearer. Getting this wrong
                 // produces a 401 indistinguishable from a bad key.
                 .header("Authorization", format!("Key {key}:{secret}"))

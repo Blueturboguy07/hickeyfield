@@ -814,7 +814,7 @@ pub fn resolve_endpoint(
 // Higgsfield's own key-pair platform
 // ---------------------------------------------------------------------------
 
-/// Which input modes `platform.higgsfield.ai` serves, per family root.
+/// Which input modes `api.higgsfield.ai` serves, per family root.
 ///
 /// Read from `https://docs.higgsfield.ai/docs/openapi.json` on 2026-08-28: 47
 /// model paths, and the third-party families among them are consistently **one
