@@ -171,13 +171,21 @@ fn fal_keys(role: MediaRole, slug: &str) -> &'static [&'static str] {
             }
         }
         MediaRole::End => {
+            // Measured across every video endpoint in the registry on
+            // 2026-08-28 by reading fal's own schemas. The previous default was
+            // `tail_image_url`, commented "Kling's spelling, and the most
+            // common one" — it is neither. Exactly ONE endpoint uses it
+            // (`kling-video/v2.5-turbo`); Kling o1, 2.6, v3 and o3 all say
+            // `end_image_url`, as do both Seedance lines, Hailuo and Wan 2.7.
+            // So every model but one silently lost its end frame: fal drops a
+            // key it does not declare, and the user is billed for a
+            // start-frame-only render they did not ask for.
             if vace {
                 &["last_frame_url"]
-            } else if slug.contains("minimax") || slug.contains("hailuo") {
-                &["end_image_url"]
-            } else {
-                // Kling's spelling, and the most common one.
+            } else if slug.contains("v2.5-turbo") {
                 &["tail_image_url"]
+            } else {
+                &["end_image_url"]
             }
         }
         MediaRole::Reference => {
@@ -1750,6 +1758,77 @@ mod tests {
             body.get("image_url").and_then(|v| v.as_str()),
             Some("https://ex/a.png"),
             "their openapi requires `image_url`; got {body:?}"
+        );
+    }
+
+    #[test]
+    fn the_end_frame_key_is_the_one_fal_actually_declares() {
+        // Measured from fal's own schemas 2026-08-28. `end_image_url` is the
+        // rule; `tail_image_url` is one endpoint's exception, not the default
+        // it used to be.
+        for (slug, want) in [
+            ("bytedance/seedance-2.0", "end_image_url"),
+            ("bytedance/seedance-2.0/fast", "end_image_url"),
+            ("bytedance/seedance-2.0/mini", "end_image_url"),
+            ("fal-ai/bytedance/seedance/v1/pro", "end_image_url"),
+            ("fal-ai/bytedance/seedance/v1.5/pro", "end_image_url"),
+            ("fal-ai/kling-video/v2.6/pro", "end_image_url"),
+            ("fal-ai/kling-video/v3/standard", "end_image_url"),
+            ("fal-ai/kling-video/o1", "end_image_url"),
+            ("fal-ai/kling-video/o3/pro", "end_image_url"),
+            ("fal-ai/minimax/hailuo-2.3", "end_image_url"),
+            ("fal-ai/wan/v2.7", "end_image_url"),
+            ("minimax/h3", "end_image_url"),
+            // The two genuine exceptions.
+            ("fal-ai/kling-video/v2.5-turbo/pro", "tail_image_url"),
+            ("fal-ai/wan-vace-14b", "last_frame_url"),
+        ] {
+            assert_eq!(
+                Dialect::Fal.keys(MediaRole::End, slug).first().copied(),
+                Some(want),
+                "{slug} end-frame key"
+            );
+        }
+    }
+
+    #[test]
+    fn seedance_binds_an_end_frame_fal_will_read() {
+        // The regression this fixes: the end frame reached the job record and
+        // then vanished into a swept key, and the render was billed without it.
+        let spec = spec(vec![
+            media_flag("start_image", Arity::One),
+            media_flag("end_image", Arity::One),
+        ]);
+        let media = [
+            MediaRef::new(
+                MediaRole::Start,
+                MediaSource::Url {
+                    url: "https://ex/start.png".into(),
+                },
+            ),
+            MediaRef::new(
+                MediaRole::End,
+                MediaSource::Url {
+                    url: "https://ex/end.jpg".into(),
+                },
+            ),
+        ];
+        let body = bind(
+            &spec,
+            "Seedance 2.0",
+            &media,
+            Dialect::Fal,
+            "bytedance/seedance-2.0",
+        )
+        .expect("both frames bind");
+        assert_eq!(
+            body.get("end_image_url").and_then(|v| v.as_str()),
+            Some("https://ex/end.jpg"),
+            "fal declares end_image_url; got {body:?}"
+        );
+        assert!(
+            !body.contains_key("tail_image_url"),
+            "the old key would be swept away unread: {body:?}"
         );
     }
 }

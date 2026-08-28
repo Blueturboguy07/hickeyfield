@@ -218,6 +218,11 @@ pub fn submit_to_provider(
     };
 
     let mut body = serde_json::Map::new();
+    // Remembered so the unknown-key sweep below can tell a setting apart from a
+    // file. Dropping the first is a downgrade; dropping the second means the
+    // user's image never reached the model and they paid for a different
+    // render than the one they asked for.
+    let mut media_keys: Vec<String> = Vec::new();
     for (k, v) in hickeyfield_core::media::bind(
         &model.spec,
         &model.display_name,
@@ -227,6 +232,7 @@ pub fn submit_to_provider(
     )
     .map_err(|e| JobError::Permanent(e.to_string()))?
     {
+        media_keys.push(k.clone());
         body.insert(k, v);
     }
     if model.spec.takes_prompt() && !wire_prompt.is_empty() {
@@ -408,6 +414,24 @@ pub fn submit_to_provider(
                 .filter(|k| !schema.accepts(k))
                 .cloned()
                 .collect();
+            // A media key the endpoint does not declare is never droppable.
+            // This is the Gemini Omni failure again, and it shipped: Seedance
+            // 2.0 was sent `tail_image_url` for its end frame, fal declares
+            // `end_image_url`, so the key was swept away here with nothing but
+            // a `tracing::warn!` to a stdout no one reads — and the user was
+            // billed for a start-frame-only clip with no advisory on the job.
+            // Refusing costs one failed submit; the alternative costs money and
+            // is invisible.
+            let lost: Vec<&String> = unknown.iter().filter(|k| media_keys.contains(k)).collect();
+            if let Some(k) = lost.first() {
+                return Err(JobError::Permanent(format!(
+                    "{} cannot take the {} you attached on this route — its endpoint has no \
+                     `{k}` field, so the file would be ignored and you would be billed for a \
+                     render that never used it. Try another model or route.",
+                    model.display_name,
+                    if lost.len() == 1 { "file" } else { "files" },
+                )));
+            }
             let mut ignored_settings: Vec<String> = Vec::new();
             for k in &unknown {
                 if USER_FACING.contains(&k.as_str()) {
