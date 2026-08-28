@@ -27,6 +27,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 
 use crate::catalog::{Arity, ModelSpec};
+use crate::provider::ProviderId;
 
 /// What a piece of attached media is *for*.
 ///
@@ -54,6 +55,32 @@ pub enum MediaRole {
 }
 
 impl MediaRole {
+    /// Every role, for callers that must ask about all of them — the picker
+    /// asks "which of these slots can this model+route actually take".
+    pub const ALL: [MediaRole; 7] = [
+        MediaRole::Start,
+        MediaRole::End,
+        MediaRole::Reference,
+        MediaRole::Video,
+        MediaRole::VideoReference,
+        MediaRole::Audio,
+        MediaRole::AudioReference,
+    ];
+
+    /// The wire name, matching this enum's serde spelling and the strings the
+    /// UI keys its slot table on.
+    pub fn slug(self) -> &'static str {
+        match self {
+            MediaRole::Start => "start",
+            MediaRole::End => "end",
+            MediaRole::Reference => "reference",
+            MediaRole::Video => "video",
+            MediaRole::VideoReference => "video_reference",
+            MediaRole::Audio => "audio",
+            MediaRole::AudioReference => "audio_reference",
+        }
+    }
+
     /// The input mode attaching this role implies.
     ///
     /// A start frame or a reference still makes a request image-driven; a
@@ -332,6 +359,19 @@ pub fn resolve(media: &[MediaRef], uploader: &dyn Uploader) -> Result<Vec<MediaR
         .collect()
 }
 
+/// Which vocabulary a route speaks.
+///
+/// Was written out by hand in three places — the submit path, the picker
+/// filter and the capability lookup — which is exactly how the three drift.
+/// The rule: fal everywhere, plus Higgsfield's fal-shaped mirror; the
+/// catalogue only for Higgsfield's own in-house surfaces.
+pub fn dialect_for(provider: ProviderId, slug: &str) -> Dialect {
+    match provider {
+        ProviderId::Higgsfield if !higgsfield_speaks_fal(slug) => Dialect::Catalog,
+        _ => Dialect::Fal,
+    }
+}
+
 /// Can this model take this role, in this dialect?
 ///
 /// **The authority differs by dialect, and using the wrong one fails in both
@@ -357,6 +397,12 @@ pub fn can_bind(spec: &ModelSpec, role: MediaRole, dialect: Dialect, slug: &str)
         // unmeasured endpoint would hide working models.
         Dialect::Fal => {
             if takes_no_media(slug) {
+                return false;
+            }
+            // Measured to have nowhere to put a second frame. Refusing here is
+            // the only thing standing between the user and a full-price render
+            // that quietly ignored the file they attached.
+            if role == MediaRole::End && takes_no_end_frame(slug) {
                 return false;
             }
             match modes_for(slug) {
@@ -718,6 +764,43 @@ const FAL_NO_MEDIA: [&str; 10] = [
 /// True when fal's schema shows this endpoint takes no attachments.
 pub fn takes_no_media(slug: &str) -> bool {
     FAL_NO_MEDIA.contains(&slug)
+}
+
+/// Routes that take a start frame but have **no end-frame field at all**.
+///
+/// The third way an attachment can vanish, and the one that had no guard.
+/// [`FAL_NO_MEDIA`] catches endpoints that take nothing; the mode table catches
+/// the wrong input mode; neither catches an endpoint that happily accepts your
+/// still and has nowhere to put the second one. fal ignores keys it does not
+/// declare, so the render runs, looks plausible, and is billed in full.
+///
+/// Measured 2026-08-28 against every video route in the registry — fal via
+/// `fal.ai/api/openapi/queue/openapi.json`, Higgsfield via their own
+/// `openapi.json`. The Higgsfield entries matter most: that provider gets no
+/// schema sweep at submit, so nothing downstream would have caught them.
+///
+/// Keyed by the **route slug** the registry stores, not the resolved endpoint,
+/// because that is what [`can_bind`] is given. fal and Higgsfield slugs cannot
+/// collide — fal's carry a vendor prefix (`fal-ai/`, `xai/`) where the mirror's
+/// do not.
+const NO_END_FRAME: [&str; 8] = [
+    // -- fal -------------------------------------------------------------
+    "xai/grok-imagine-video/v1.5",
+    "fal-ai/wan-25-preview",
+    // -- Higgsfield's mirror ----------------------------------------------
+    // Not one of their image-to-video paths declares an end frame. Only DoP
+    // does, and DoP is judged by the catalogue, not by this list.
+    "bytedance/seedance/v1/pro/fast",
+    "kling-video/v2.5-turbo/pro",
+    "minimax/hailuo-2.3/pro",
+    "veo3.1",
+    "veo3.1/fast",
+    "wan-25-preview",
+];
+
+/// True when this route accepts media but cannot take an end frame.
+pub fn takes_no_end_frame(slug: &str) -> bool {
+    NO_END_FRAME.contains(&slug)
 }
 
 /// Whether a slug is already a complete endpoint.
@@ -1830,5 +1913,100 @@ mod tests {
             !body.contains_key("tail_image_url"),
             "the old key would be swept away unread: {body:?}"
         );
+    }
+
+    #[test]
+    fn an_end_frame_is_refused_where_the_endpoint_has_nowhere_to_put_it() {
+        // The costly-mistake guard. fal ignores keys it does not declare, so
+        // without this the render runs, looks fine, and is billed in full
+        // having never opened the second file.
+        let spec = spec(vec![
+            media_flag("start_image", Arity::One),
+            media_flag("end_image", Arity::One),
+        ]);
+        for slug in [
+            "fal-ai/wan-25-preview",
+            "xai/grok-imagine-video/v1.5",
+            // Higgsfield's mirror gets no schema sweep at submit, so this list
+            // is the only thing standing between the user and a silent drop.
+            "bytedance/seedance/v1/pro/fast",
+            "kling-video/v2.5-turbo/pro",
+            "veo3.1",
+        ] {
+            assert!(
+                !can_bind(&spec, MediaRole::End, Dialect::Fal, slug),
+                "{slug} has no end-frame field and must refuse one"
+            );
+            // ...but the start frame it does take is unaffected.
+            assert!(
+                can_bind(&spec, MediaRole::Start, Dialect::Fal, slug),
+                "{slug} still takes a start frame"
+            );
+        }
+    }
+
+    #[test]
+    fn models_that_do_have_an_end_frame_still_take_one() {
+        let spec = spec(vec![
+            media_flag("start_image", Arity::One),
+            media_flag("end_image", Arity::One),
+        ]);
+        for slug in [
+            "bytedance/seedance-2.0",
+            "fal-ai/kling-video/v2.5-turbo/pro",
+            "fal-ai/kling-video/v3/standard",
+            "fal-ai/wan/v2.7",
+            "fal-ai/wan-vace-14b",
+            "minimax/h3",
+        ] {
+            assert!(
+                can_bind(&spec, MediaRole::End, Dialect::Fal, slug),
+                "{slug} declares an end frame and must accept one"
+            );
+        }
+    }
+
+    #[test]
+    fn binding_an_end_frame_to_a_route_without_one_names_the_model() {
+        let spec = spec(vec![
+            media_flag("start_image", Arity::One),
+            media_flag("end_image", Arity::One),
+        ]);
+        let media = [MediaRef::new(
+            MediaRole::End,
+            MediaSource::Url {
+                url: "https://ex/end.jpg".into(),
+            },
+        )];
+        let err = bind(
+            &spec,
+            "Wan 2.5",
+            &media,
+            Dialect::Fal,
+            "fal-ai/wan-25-preview",
+        )
+        .expect_err("must refuse rather than drop");
+        let msg = err.to_string();
+        assert!(msg.contains("Wan 2.5"), "{msg}");
+        assert!(msg.contains("end frame"), "{msg}");
+    }
+
+    #[test]
+    fn one_rule_decides_the_dialect() {
+        // Was written out by hand in three places. Higgsfield's mirror speaks
+        // fal; only their in-house surfaces speak the catalogue.
+        assert_eq!(
+            dialect_for(ProviderId::Higgsfield, "kling-video/v2.5-turbo/pro"),
+            Dialect::Fal
+        );
+        assert_eq!(
+            dialect_for(ProviderId::Higgsfield, "higgsfield-ai/dop/standard"),
+            Dialect::Catalog
+        );
+        assert_eq!(
+            dialect_for(ProviderId::Higgsfield, "marketing_studio_video"),
+            Dialect::Catalog
+        );
+        assert_eq!(dialect_for(ProviderId::Fal, "fal-ai/veo3.1"), Dialect::Fal);
     }
 }

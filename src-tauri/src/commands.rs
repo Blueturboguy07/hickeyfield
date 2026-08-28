@@ -270,6 +270,15 @@ pub struct CapabilitiesDto {
     pub default_aspect: Option<String>,
     pub audio: bool,
     pub constraints: Vec<String>,
+    /// Media roles this model cannot take **on this route**, by wire name.
+    ///
+    /// The slot list comes from the use case, so every image-to-video tab draws
+    /// an End Frame box whether or not the chosen model has anywhere to put
+    /// one. Seedance 2.0 accepted the file, ignored it, and billed in full.
+    /// The submit path refuses that now, but refusing after the user has
+    /// composed the whole shot is the wrong moment — this greys the slot out
+    /// before it is ever filled.
+    pub unsupported_roles: Vec<String>,
 }
 
 impl CapabilitiesDto {
@@ -301,6 +310,9 @@ impl CapabilitiesDto {
             default_aspect: c.aspect.default.clone(),
             audio: c.audio_output.support.is_yes(),
             constraints: c.constraints.clone(),
+            // Needs the route, which this conversion does not have. Filled by
+            // `model_capabilities`.
+            unsupported_roles: Vec::new(),
         }
     }
 }
@@ -319,6 +331,8 @@ impl From<hickeyfield_core::catalog::Capabilities> for CapabilitiesDto {
             default_aspect: c.default_aspect,
             audio: c.audio,
             constraints: c.constraints,
+            // Model-level view, no route chosen yet: nothing can be ruled out.
+            unsupported_roles: Vec::new(),
         }
     }
 }
@@ -505,7 +519,21 @@ pub fn model_capabilities(
         mode,
         hickeyfield_core::fal_schema::for_endpoint,
     );
-    Ok(CapabilitiesDto::from_capability(&cap))
+    let mut dto = CapabilitiesDto::from_capability(&cap);
+
+    // Which slots this model+route has nowhere to put. Asked of the same
+    // function the submit path binds with, so the picker and the wire cannot
+    // disagree — the End Frame box was drawn from the use case alone, and
+    // Seedance 2.0 took the file, ignored it and charged for the render.
+    let dialect = hickeyfield_core::media::dialect_for(route.provider, &route.slug);
+    dto.unsupported_roles = hickeyfield_core::media::MediaRole::ALL
+        .iter()
+        .filter(|role| {
+            !hickeyfield_core::media::can_bind(&model.spec, **role, dialect, &route.slug)
+        })
+        .map(|role| role.slug().to_string())
+        .collect();
+    Ok(dto)
 }
 
 // ── Cost ───────────────────────────────────────────────────────────────────

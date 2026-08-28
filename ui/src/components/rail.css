@@ -536,3 +536,22 @@
   color: var(--text-brand);
   font-weight: 700;
 }
+
+/* A slot the chosen model has nowhere to put.
+ *
+ * Dimmed and inert rather than hidden: the job really does have this slot, and
+ * removing it as models change would make the panel jump. Saying "not on this
+ * model" teaches which model to pick; a vanished box teaches nothing. The
+ * <input> is disabled too, so this is not styling standing in for behaviour. */
+.frame-slot-off {
+  opacity: 0.45;
+}
+
+.frame-slot-off .frame-slot-target {
+  cursor: not-allowed;
+}
+
+.frame-slot-off-note {
+  color: var(--text-disabled);
+  font-weight: 400;
+}

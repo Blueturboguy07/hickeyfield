@@ -298,6 +298,8 @@ interface RawCapabilities {
   default_aspect?: string | null;
   audio?: boolean;
   constraints?: string[];
+  unsupported_roles?: string[];
+  unsupportedRoles?: string[];
 }
 
 const toCapabilities = (
@@ -316,6 +318,7 @@ const toCapabilities = (
         defaultAspect: c.default_aspect ?? null,
         audio: c.audio ?? false,
         constraints: c.constraints ?? [],
+        unsupportedRoles: c.unsupported_roles ?? c.unsupportedRoles ?? [],
       }
     : undefined;
 

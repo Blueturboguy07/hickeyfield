@@ -8,6 +8,15 @@ export interface FrameSlot {
   label: string;
   /** The job cannot run without this one. */
   required?: boolean;
+  /**
+   * The chosen model has nowhere to put this one on the chosen route.
+   *
+   * The slot list comes from the use case, so every image-to-video tab drew an
+   * End Frame box whether or not the model had an end-frame field. Seedance
+   * 2.0 took the file, ignored it, and billed the render anyway. Submitting is
+   * refused now, but the slot should never have been fillable.
+   */
+  unsupported?: boolean;
 }
 
 /**
@@ -34,13 +43,23 @@ export function FrameSlots({
       {slots.map((slot) => {
         const filled = media.find((m) => m.role === slot.role);
         const inputId = `frame-${slot.role}`;
+        const off = slot.unsupported === true;
         return (
-          <div className="frame-slot" key={slot.role}>
+          <div
+            className={`frame-slot${off ? " frame-slot-off" : ""}`}
+            key={slot.role}
+            title={
+              off
+                ? `This model has no ${slot.label.toLowerCase()} on the selected route — it would be ignored and you would still be charged.`
+                : undefined
+            }
+          >
             <input
               id={inputId}
               type="file"
               className="sr-only file-input"
               accept={acceptFor(slot.role)}
+              disabled={off}
               onChange={(e) => void onAdd(slot.role, e.currentTarget.files)}
             />
             <label className="frame-slot-target" htmlFor={inputId}>
@@ -59,6 +78,9 @@ export function FrameSlots({
               )}
               <span className="frame-slot-label">
                 {slot.label}
+                {off ? (
+                  <span className="frame-slot-off-note"> · not on this model</span>
+                ) : null}
                 {slot.required && !filled ? (
                   // Marked on the empty slot only: once filled, the asterisk
                   // is noise. Without it, "Edit Video" with no clip silently

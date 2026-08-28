@@ -35,12 +35,20 @@ const ROLE_LABELS: Record<string, string> = {
   audio_reference: "Voice Reference",
 };
 
-function slotsFor(useCase: UseCase | undefined): FrameSlot[] {
+function slotsFor(
+  useCase: UseCase | undefined,
+  unsupported: string[] | undefined,
+): FrameSlot[] {
   if (!useCase) return [];
+  // The use case says which slots the *job* has; capabilities say which of
+  // them the chosen model+route can actually hold. Both are needed: the job
+  // decides the shape, the model decides what is fillable.
+  const off = new Set(unsupported ?? []);
   return useCase.slots.map(([role, required]) => ({
     role: role as FrameSlot["role"],
     label: ROLE_LABELS[role] ?? role,
     required,
+    unsupported: off.has(role),
   }));
 }
 
@@ -119,7 +127,10 @@ export function SettingsRail({
           />
 
           <FrameSlots
-            slots={slotsFor(useCases.find((u) => u.slug === tab))}
+            slots={slotsFor(
+              useCases.find((u) => u.slug === tab),
+              capabilities?.unsupportedRoles,
+            )}
             media={media}
             onAdd={onMediaAdd}
             onRemove={onMediaRemoveRole}

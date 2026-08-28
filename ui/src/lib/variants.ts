@@ -18,6 +18,9 @@ import type {
  * is honest; a wrong chip costs the user money.
  */
 export const UNKNOWN_CAPABILITIES: ModelCapabilities = {
+  // Nothing is known, so nothing is ruled out — the same honesty as the empty
+  // axes above. A slot wrongly greyed out is as bad as a chip wrongly offered.
+  unsupportedRoles: [],
   supportsDuration: false,
   durations: [],
   supportsResolution: false,

@@ -238,11 +238,10 @@ pub fn route_serves(model: &Model, route: &Route, use_case: UseCase) -> bool {
             // their own spec — already consulted just above — is the authority
             // on the mode. Their in-house surfaces keep the catalogue, which
             // really does describe them. See `media::higgsfield_speaks_fal`.
-            if media::higgsfield_speaks_fal(&route.slug) {
-                (media::Dialect::Fal, route.slug.as_str())
-            } else {
-                (media::Dialect::Catalog, route.slug.as_str())
-            }
+            (
+                media::dialect_for(route.provider, &route.slug),
+                route.slug.as_str(),
+            )
         }
         // Only fal's and Higgsfield's endpoint *shapes* are measured, so there
         // is no mode check to run here — but the catalogue still describes what

@@ -24,6 +24,7 @@ import { gradientDataUri } from "./lib/placeholder";
  * up assuming defaults for models that declare none.
  */
 const caps = (over: Partial<ModelCapabilities> = {}): ModelCapabilities => ({
+  unsupportedRoles: [],
   supportsDuration: (over.durations?.length ?? 0) > 0,
   durations: [],
   supportsResolution: (over.resolutions?.length ?? 0) > 0,

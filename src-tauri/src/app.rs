@@ -181,15 +181,7 @@ pub fn submit_to_provider(
     // Which parameter vocabulary this endpoint speaks. The catalogue documents
     // Higgsfield's CLI, so it is only correct when we are actually talking to
     // Higgsfield; everything routed through fal needs fal's names.
-    let dialect = match route.provider {
-        // ...except on the paths where Higgsfield mirrors fal, which take
-        // fal's `image_url` rather than the CLI's `start_image`. Posting the
-        // catalogue's names there is a 422 on every image-to-video call.
-        ProviderId::Higgsfield if !hickeyfield_core::media::higgsfield_speaks_fal(&route.slug) => {
-            hickeyfield_core::media::Dialect::Catalog
-        }
-        _ => hickeyfield_core::media::Dialect::Fal,
-    };
+    let dialect = hickeyfield_core::media::dialect_for(route.provider, &route.slug);
 
     // Bind before uploading. Attaching an audio file to a model that cannot
     // take one is a mistake worth catching in milliseconds, not after pushing

@@ -45,6 +45,14 @@ export interface ModelCapabilities {
   audio: boolean;
   /** Cross-field rules the flag table cannot express, verbatim from the spec. */
   constraints: string[];
+  /**
+   * Media roles this model cannot take on the selected route, by wire name.
+   *
+   * Empty until a route is chosen. Drives the greyed-out slots: the use case
+   * says the job has an End Frame, this says whether the model has anywhere
+   * to put it.
+   */
+  unsupportedRoles: string[];
 }
 
 export interface Model {
