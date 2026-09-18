@@ -88,11 +88,15 @@ source_for() {
       #
       # BtbN rebuilds `latest` in place, so pinning there guarantees the
       # checksum breaks every few days — and a gate that cries wolf gets
-      # bypassed, which is worse than no gate. The dated tags are immutable.
-      URL="https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-08-04-21-26/ffmpeg-n8.1.2-34-g9b6c8969e0-win64-gpl-8.1.zip"
-      ARCHIVE_SHA="b7f08f5b4975e6ceecb9785584e559cfed0968fae701db92abd968e7a2ae0402"
-      MEMBER="ffmpeg-n8.1.2-34-g9b6c8969e0-win64-gpl-8.1/bin/ffmpeg.exe"
-      BINARY_SHA="1c399e61a900e08bf22e7308b99c5a5510d3d47261b5a97029d1b0de1ba770c3"
+      # bypassed, which is worse than no gate. The dated tags are immutable
+      # — but not all of them are kept: BtbN drops daily autobuilds after
+      # about two weeks and keeps one per month (the last day's build). The
+      # 2026-08-04 pin 404'd for every Windows reader by mid-September, so
+      # pin a MONTH-END tag only (the 2024-10-31 one is still up).
+      URL="https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-08-31-13-27/ffmpeg-n8.1.2-50-g1a748fe2cd-win64-gpl-8.1.zip"
+      ARCHIVE_SHA="273abb45f3f9f76c303e35ff39f5bb6c23c163ae65f6244a32b7d4a7f6cf0616"
+      MEMBER="ffmpeg-n8.1.2-50-g1a748fe2cd-win64-gpl-8.1/bin/ffmpeg.exe"
+      BINARY_SHA="19121c4a9dece4780f33e6cfc2ba58e36347d4c64f0df4efc05a6959a8191aa6"
       SUFFIX=".exe"
       ;;
     *)
