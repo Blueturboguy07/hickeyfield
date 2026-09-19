@@ -1,0 +1,111 @@
+name: bugfix-lab-chain
+
+# Runs the hickeyfield Windows guide's site steps 13 -> 14 -> 15 verbatim on a
+# clean windows-latest runner, so the ORACLE observes the whole chain the
+# reporters described: the ffmpeg fetch (site step 14) AND the tauri build
+# (site step 15) that aborts on the missing sidecar resource.
+#
+# workflow_dispatch does not resolve for a workflow file that lives only on a
+# non-default branch, so this fires on push to its own per-ref branch
+# (bugfix-lab/chain/<short sha>), which also lets two refs run in parallel
+# without racing over a shared branch.
+on:
+  push:
+    branches:
+      - 'bugfix-lab/chain/**'
+  workflow_dispatch:
+
+env:
+  # Rewritten by oracle.sh before each push: the exact commit under test.
+  TARGET_REF: "ab5992c5aac8be595ce570e7ca0a80484e372321"
+
+jobs:
+  guide-chain:
+    runs-on: windows-latest
+    timeout-minutes: 150
+    steps:
+      - name: Checkout harness branch (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Move to the commit under test
+        shell: pwsh
+        run: |
+          git checkout $env:TARGET_REF
+          git log -1 --format="COMMIT_UNDER_TEST %H %ci %s"
+
+      - name: Guide site steps 5-9 equivalent (pnpm, NASM; Rust/CMake/MSVC preinstalled)
+        shell: pwsh
+        run: |
+          git --version
+          node --version
+          npm.cmd install -g pnpm
+          pnpm.cmd --version
+          cargo --version
+          cmake --version
+          choco install nasm -y --no-progress
+          "C:\Program Files\NASM" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Guide site step 13 verbatim (Install the interface packages)
+        shell: pwsh
+        run: |
+          cd ui; pnpm.cmd install; cd ..
+
+      - name: Guide site step 14 verbatim (Fetch the video engine)
+        id: ffmpeg
+        shell: pwsh
+        run: |
+          & "$env:ProgramFiles\Git\bin\bash.exe" scripts/fetch-ffmpeg.sh 2>&1 | Tee-Object -FilePath "$env:RUNNER_TEMP\step14.log"
+          $code = $LASTEXITCODE
+          Write-Host "STEP14_EXIT=$code"
+          "exitcode=$code" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          exit 0
+
+      - name: Guide site step 15 verbatim (Build the installer)
+        id: package
+        shell: pwsh
+        run: |
+          ui\node_modules\.bin\tauri.CMD build 2>&1 | Tee-Object -FilePath "$env:RUNNER_TEMP\step15.log"
+          $code = $LASTEXITCODE
+          Write-Host "STEP15_EXIT=$code"
+          "exitcode=$code" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          exit 0
+
+      - name: Evaluate oracle
+        shell: pwsh
+        run: |
+          $exe = "src-tauri\binaries\ffmpeg-x86_64-pc-windows-msvc.exe"
+          $exeExists = Test-Path $exe
+          $fetchExit = "${{ steps.ffmpeg.outputs.exitcode }}"
+          $buildExit = "${{ steps.package.outputs.exitcode }}"
+          $s14 = ""
+          if (Test-Path "$env:RUNNER_TEMP\step14.log") { $s14 = Get-Content "$env:RUNNER_TEMP\step14.log" -Raw }
+          $s15 = ""
+          if (Test-Path "$env:RUNNER_TEMP\step15.log") { $s15 = Get-Content "$env:RUNNER_TEMP\step15.log" -Raw }
+          $curl404 = $s14 -match "The requested URL returned error: 404"
+          $resourceErr = ($s15 -match "resource path") -and ($s15 -match "ffmpeg-x86_64-pc-windows-msvc\.exe") -and ($s15 -match "doesn't exist")
+          $setup = Get-ChildItem "target\release\bundle\nsis" -Filter *-setup.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+          Write-Host "--- ORACLE FACTS ---"
+          Write-Host "TARGET_REF=$env:TARGET_REF"
+          Write-Host "step14 (ffmpeg fetch) exit: $fetchExit"
+          Write-Host "step14 curl 404 seen:       $curl404"
+          Write-Host "sidecar Test-Path $exe :    $exeExists"
+          if ($exeExists) { Write-Host ("sidecar sha256: " + (Get-FileHash $exe -Algorithm SHA256).Hash) }
+          Write-Host "step15 (tauri build) exit:  $buildExit"
+          Write-Host "step15 missing-resource err:$resourceErr"
+          if ($setup) { Write-Host "step16 precondition: installer $($setup.Name)" } else { Write-Host "step16 precondition: NO nsis installer produced" }
+          if ($resourceErr) {
+            Write-Host "--- step15 excerpt ---"
+            ($s15 -split "`n" | Select-String -Pattern "resource path|failed to build app" | Select-Object -First 6) | ForEach-Object { Write-Host $_ }
+          }
+          if ($fetchExit -ne "0" -or $curl404 -or -not $exeExists -or $resourceErr) {
+            Write-Host "BUGFIX_LAB_PRESENT"
+            exit 1
+          }
+          if ($buildExit -ne "0" -or -not $setup) {
+            Write-Host "BUGFIX_LAB_ABSENT_BUT_BUILD_FAILED_ELSEWHERE"
+            exit 0
+          }
+          Write-Host "BUGFIX_LAB_ABSENT"
+          exit 0
