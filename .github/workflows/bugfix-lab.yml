@@ -1,26 +1,40 @@
 name: bugfix-lab
 
+# workflow_dispatch alone 404s here: the GitHub API only resolves a workflow
+# by filename against what's registered on the DEFAULT branch, and this file
+# lives only on a fix branch (confirmed empirically 2026-09-19: "workflow
+# bugfix-lab.yml not found on the default branch"). Per prior art elsewhere
+# in this campaign (e.g. cue's fix/cue-clone-step-posix-if-windows-parsererror),
+# the workaround is a push trigger scoped to this branch: oracle.sh edits
+# TARGET_REF below and pushes, which fires the run directly — no dispatch
+# registration needed.
 on:
+  push:
+    branches:
+      - fix/hickeyfield-windows-ffmpeg-fetch-404
   workflow_dispatch:
-    inputs:
-      ref:
-        description: "Commit SHA to check out and test (defaults to the dispatched ref itself)"
-        required: false
-        default: ""
+
+env:
+  # Overwritten + committed by oracle.sh before each push. This is the exact
+  # commit under test — NOT necessarily this branch's own HEAD, since the
+  # branch only carries the harness and the commit under test may be an
+  # older/ancestor commit (e.g. the pre-fix commit reporters actually had).
+  TARGET_REF: "143673698b229074bfdbe6694932800173919106"
 
 jobs:
   ffmpeg-fetch:
     runs-on: windows-latest
     steps:
-      - name: Checkout target commit
+      - name: Checkout branch (full history)
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref != '' && inputs.ref || github.ref }}
           fetch-depth: 0
 
-      - name: Show commit under test
+      - name: Move to the commit under test
         shell: pwsh
         run: |
+          Write-Host "Checking out TARGET_REF=$env:TARGET_REF"
+          git checkout $env:TARGET_REF
           git rev-parse HEAD
           git log -1 --format="%H %s"
 
