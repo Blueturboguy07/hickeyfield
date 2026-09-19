@@ -1,0 +1,49 @@
+name: bugfix-lab
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Commit SHA to check out and test (defaults to the dispatched ref itself)"
+        required: false
+        default: ""
+
+jobs:
+  ffmpeg-fetch:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout target commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref != '' && inputs.ref || github.ref }}
+          fetch-depth: 0
+
+      - name: Show commit under test
+        shell: pwsh
+        run: |
+          git rev-parse HEAD
+          git log -1 --format="%H %s"
+
+      - name: Run guide step 14 verbatim (Fetch the video engine)
+        id: fetch
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          & "$env:ProgramFiles\Git\bin\bash.exe" scripts/fetch-ffmpeg.sh
+          "exitcode=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
+
+      - name: Evaluate oracle
+        shell: pwsh
+        run: |
+          $exePath = "src-tauri\binaries\ffmpeg-x86_64-pc-windows-msvc.exe"
+          $exists = Test-Path $exePath
+          $fetchExit = "${{ steps.fetch.outputs.exitcode }}"
+          Write-Host "fetch-ffmpeg.sh exit code: $fetchExit"
+          Write-Host "Test-Path $exePath : $exists"
+          if ($fetchExit -ne "0" -or -not $exists) {
+            Write-Host "BUGFIX_LAB_PRESENT"
+            exit 1
+          } else {
+            Write-Host "BUGFIX_LAB_ABSENT"
+            exit 0
+          }
