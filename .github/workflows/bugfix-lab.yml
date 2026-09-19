@@ -19,7 +19,7 @@ env:
   # commit under test — NOT necessarily this branch's own HEAD, since the
   # branch only carries the harness and the commit under test may be an
   # older/ancestor commit (e.g. the pre-fix commit reporters actually had).
-  TARGET_REF: "ab5992c5aac8be595ce570e7ca0a80484e372321"
+  TARGET_REF: "143673698b229074bfdbe6694932800173919106"
 
 jobs:
   ffmpeg-fetch:
