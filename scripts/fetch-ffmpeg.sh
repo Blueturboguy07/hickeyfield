@@ -72,7 +72,7 @@ CACHE="${hickeyfield_FFMPEG_CACHE:-${TMPDIR:-/tmp}/hickeyfield-ffmpeg-cache}"
 # deliberate human re-pin (review the new configure line, then
 # --update-checksums), never an automatic "just take whatever is there".
 # --------------------------------------------------------------------------
-TARGETS="aarch64-apple-darwin x86_64-pc-windows-msvc"
+TARGETS="aarch64-apple-darwin x86_64-apple-darwin x86_64-pc-windows-msvc"
 
 source_for() {
   case "$1" in
@@ -81,6 +81,22 @@ source_for() {
       ARCHIVE_SHA="ebb82529562b71170807bbc6b0e7eb4f0b13af8cbb0e085bb9e8f6fe709598ad"
       MEMBER="ffmpeg"
       BINARY_SHA="9a08d61f9328e8164ba560ee7a79958e357307fcfeea6fe626b7d66cdc287028"
+      SUFFIX=""
+      ;;
+    x86_64-apple-darwin)
+      # macOS Intel — osxexperts.net, FFmpeg 8.0. The vendor does not publish
+      # a 9.x/x86_64 pair, so Intel is pinned a minor version behind arm64.
+      # Same static-build reasoning as the arm64 entry above: `otool -L` shows
+      # only system frameworks and /usr/lib dylibs.
+      #
+      # Carries --enable-version3 alongside --enable-gpl, so this build is
+      # GPL-3.0-or-later, not GPL-2.0-or-later like the arm64 one. The NOTICE
+      # stanza --print-notice emits reports the version per target from the
+      # configure line, so nothing has to be stated by hand here.
+      URL="https://www.osxexperts.net/ffmpeg80intel.zip"
+      ARCHIVE_SHA="2d24d22db78c87f394a5822867acd5c5dc5e762cd261a44bd26923f3a5af3e07"
+      MEMBER="ffmpeg"
+      BINARY_SHA="df3f1e3facdc1ae0ad0bd898cdfb072fbc9641bf47b11f172844525a05db8d11"
       SUFFIX=""
       ;;
     x86_64-pc-windows-msvc)

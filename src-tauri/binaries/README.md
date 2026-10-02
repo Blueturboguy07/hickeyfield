@@ -21,6 +21,7 @@ named `ffmpeg-<triple>`, with `.exe` on Windows:
 | target | file |
 |---|---|
 | `aarch64-apple-darwin` | `ffmpeg-aarch64-apple-darwin` |
+| `x86_64-apple-darwin` | `ffmpeg-x86_64-apple-darwin` |
 | `x86_64-pc-windows-msvc` | `ffmpeg-x86_64-pc-windows-msvc.exe` |
 
 Get the suffix wrong and `tauri build` fails with "binary not found" while the
@@ -50,6 +51,7 @@ matters for which licence texts ship:
 | target | flags | effective licence |
 |---|---|---|
 | `aarch64-apple-darwin` | `--enable-gpl` | GPL-2.0-or-later |
+| `x86_64-apple-darwin` | `--enable-gpl --enable-version3` | GPL-3.0-or-later |
 | `x86_64-pc-windows-msvc` | `--enable-gpl --enable-version3` | GPL-3.0-or-later |
 
 `--print-notice` states this per target, so `NOTICE` cannot drift from what is
@@ -89,9 +91,10 @@ Obligations that come with this, and where each is met:
 | target | source | why |
 |---|---|---|
 | `aarch64-apple-darwin` | [osxexperts.net](https://www.osxexperts.net/) ffmpeg 8.1 | genuinely static arm64; publishes a per-binary SHA-256 |
+| `x86_64-apple-darwin` | [osxexperts.net](https://www.osxexperts.net/) ffmpeg 8.0 | the vendor publishes no 9.x Intel pair, so Intel trails arm64 by a minor version |
 | `x86_64-pc-windows-msvc` | [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds) `n8.1 win64-gpl` | the `-gpl` (not `-gpl-shared`, not another vendor's "full") variant |
 
-Both are pinned by SHA-256 in `source_for()` inside the fetch script. BtbN
+All three are pinned by SHA-256 in `source_for()` inside the fetch script. BtbN
 publishes to a rolling `latest` tag, so its archive hash changes when they
 rebuild; the script stops and asks rather than accepting the new bytes. Re-pin
 deliberately — read the new configure line first, then

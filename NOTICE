@@ -32,8 +32,8 @@ Model catalogue seed — MIT
 FFmpeg — GNU General Public License
 
   Bundled as a per-platform static sidecar (src-tauri/binaries/ffmpeg-<triple>),
-  fetched and checksum-pinned by scripts/fetch-ffmpeg.sh. Neither build is
-  configured with --enable-nonfree, which would make it unredistributable.
+  fetched and checksum-pinned by scripts/fetch-ffmpeg.sh. None of these builds
+  is configured with --enable-nonfree, which would make it unredistributable.
 
   Note the two platforms ship under DIFFERENT versions of the GPL, so both
   licence texts are included:
@@ -47,6 +47,16 @@ FFmpeg — GNU General Public License
     --enable-fontconfig --enable-libharfbuzz --enable-libvmaf --enable-libzimg
     --enable-libvidstab --enable-libsnappy --enable-neon
     --enable-runtime-cpudetect --pkg-config-flags=--static
+
+  macOS Intel (x86_64-apple-darwin) — FFmpeg 8.0, GPL-3.0-or-later
+    See LICENSES/GPL-3.0.txt
+    --arch=x86_64 --enable-videotoolbox --enable-libfreetype --enable-fontconfig
+    --enable-gpl --enable-version3 --enable-libvmaf --enable-libopenjpeg
+    --enable-libopus --enable-libtheora --enable-libvorbis --enable-libmp3lame
+    --enable-libx264 --enable-libx265 --enable-libvvenc --enable-libvpx
+    --enable-libwebp --enable-libass --enable-libaom --enable-libsnappy
+    --enable-libvidstab --enable-libzimg --enable-libsvtav1 --enable-libharfbuzz
+    --enable-ffplay --pkg-config-flags=--static --enable-runtime-cpudetect
 
   Windows (x86_64-pc-windows-msvc) — FFmpeg n8.1, GPL-3.0-or-later
     See LICENSES/GPL-3.0.txt
