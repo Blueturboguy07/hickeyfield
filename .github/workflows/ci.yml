@@ -135,6 +135,9 @@ jobs:
           # goes through scripts/build-macos.sh with a Developer ID, and CI has
           # no notarization credentials.
           CI: true
+          # src-tauri/build.rs compiles the publik app token in. The repo secret
+          # holds it; a fork or a pull request from a fork gets an empty value.
+          PUBLIK_APP_TOKEN: ${{ secrets.PUBLIK_APP_TOKEN }}
 
       # The built app runs one time with PUBLIK_SELF_TEST=1 against a fake publik
       # on the runner (never publikhq.com): it must print
@@ -149,6 +152,24 @@ jobs:
           exe="$app/Contents/MacOS/$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Contents/Info.plist")"
           version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Contents/Info.plist")"
           python3 scripts/publik-self-test.py "$exe" hickeyfield "$version"
+
+      # The unsigned app, for the release: it is signed, notarized and stapled
+      # on the release Mac. ditto keeps the bundle's symlinks and attributes.
+      - name: Pack the app (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          ditto -c -k --keepParent "target/${{ matrix.target }}/release/bundle/macos/Hickeyfield.app" Hickeyfield-macos-arm64.app.zip
+          shasum -a 256 Hickeyfield-macos-arm64.app.zip
+
+      - name: Upload the app (macOS)
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Hickeyfield-macos-arm64-app
+          path: Hickeyfield-macos-arm64.app.zip
+          if-no-files-found: error
+          compression-level: 0
 
       # Catches the crossorigin regression, which is otherwise invisible until
       # someone launches the bundle and sees a blank window.
