@@ -39,3 +39,5 @@ keyring = "4"
 # Bundled SQLite: no system dependency on either platform, and the schema is
 # ours to migrate rather than the OS vendor's to change under us.
 rusqlite = { version = "0.40", features = ["bundled", "serde_json"] }
+# The publik module (src/publik.rs): a UUID v4 per install. Already in the tree through tauri.
+uuid = { version = "1", features = ["v4"] }

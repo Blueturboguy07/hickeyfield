@@ -136,6 +136,20 @@ jobs:
           # no notarization credentials.
           CI: true
 
+      # The built app runs one time with PUBLIK_SELF_TEST=1 against a fake publik
+      # on the runner (never publikhq.com): it must print
+      # "publik self-test: ok hickeyfield <version>", which proves the sign-in
+      # gate is on the start-up path of this bundle. macOS only: a Windows
+      # release build has no console to print to.
+      - name: publik self-test (the built app)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          app="target/${{ matrix.target }}/release/bundle/macos/Hickeyfield.app"
+          exe="$app/Contents/MacOS/$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Contents/Info.plist")"
+          version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Contents/Info.plist")"
+          python3 scripts/publik-self-test.py "$exe" hickeyfield "$version"
+
       # Catches the crossorigin regression, which is otherwise invisible until
       # someone launches the bundle and sees a blank window.
       - name: Assert no crossorigin attribute in built HTML

@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import type { KeyState } from "../api";
+import { useEffect, useMemo, useState } from "react";
+import { publikChoice, publikSetChoice, type KeyState, type PublikChoice } from "../api";
 import {
   PRIMARY_PROVIDER,
   localStatusLabel,
@@ -39,6 +39,20 @@ export function Settings({
   onRunOnboarding: () => void;
 }) {
   const [rechecking, setRechecking] = useState(false);
+  const [choice, setChoice] = useState<PublikChoice | null>(null);
+
+  useEffect(() => {
+    if (open) void publikChoice().then(setChoice);
+  }, [open]);
+
+  const pickChoice = async (next: PublikChoice | null) => {
+    try {
+      await publikSetChoice(next);
+      setChoice(next);
+    } catch {
+      // Outside the desktop app there is nothing to store.
+    }
+  };
 
   const providers = useMemo(() => {
     const keyed = catalog.filter((p) => p.needsKey || p.needsSecret);
@@ -112,6 +126,51 @@ export function Settings({
               onClick={() => void recheck()}
             >
               {rechecking ? "Checking…" : "Re-check"}
+            </button>
+          </div>
+        </section>
+
+        <section className="setup-block">
+          <div className="setup-block-head">
+            <h3 className="setup-heading">Sign in with publik</h3>
+            <p className="setup-sub">
+              This app opens with Sign in with publik and counts usage (app
+              opened, active session). Your answer to the &quot;Choose how to
+              pay for AI&quot; screen is stored here. Generation uses the
+              provider keys above either way.
+            </p>
+          </div>
+          <div className="local-status">
+            <span>
+              {choice === "publik"
+                ? "Your publik plan"
+                : choice === "own_key"
+                  ? "Your own keys"
+                  : "Not answered yet: the app asks at the next start"}
+            </span>
+            <button
+              type="button"
+              className="btn btn-sm btn-outline"
+              disabled={choice === "publik"}
+              onClick={() => void pickChoice("publik")}
+            >
+              Use my publik plan
+            </button>
+            <button
+              type="button"
+              className="btn btn-sm btn-outline"
+              disabled={choice === "own_key"}
+              onClick={() => void pickChoice("own_key")}
+            >
+              Use my own keys
+            </button>
+            <button
+              type="button"
+              className="btn btn-sm btn-outline"
+              disabled={choice === null}
+              onClick={() => void pickChoice(null)}
+            >
+              Ask again at next start
             </button>
           </div>
         </section>
