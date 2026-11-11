@@ -66,6 +66,15 @@ if ! security find-identity -v -p codesigning | grep -qF "$IDENTITY"; then
   exit 1
 fi
 
+# A release build compiles in the publik app token (src-tauri/build.rs): PUBLIK_APP_TOKEN in the
+# environment, or src-tauri/publik-app-token.txt filled by the release pipeline. Without it the
+# app opens with "This build has no publik app token. Ask the developer for a new build."
+if [ -z "${PUBLIK_APP_TOKEN:-}" ] && ! grep -q '^pat_' "$REPO_ROOT/src-tauri/publik-app-token.txt" 2>/dev/null; then
+  echo "Refusing to build a release with no publik app token." >&2
+  echo "Set PUBLIK_APP_TOKEN, or put the token of the listing 'hickeyfield' in src-tauri/publik-app-token.txt." >&2
+  exit 1
+fi
+
 TAURI="$REPO_ROOT/ui/node_modules/.bin/tauri"
 [ -x "$TAURI" ] || TAURI="$(command -v tauri || true)"
 if [ -z "$TAURI" ] || [ ! -x "$TAURI" ]; then

@@ -3,6 +3,8 @@ mod commands;
 mod harness;
 mod library;
 mod pricing;
+mod publik;
+mod publik_gate;
 mod runner;
 mod store;
 mod validate;
@@ -25,6 +27,11 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
+            // Sign in with publik, before the main window is shown: the window in
+            // tauri.conf.json starts hidden, and the gate thread shows it once the
+            // person is signed in. Usage counting starts there too.
+            publik_gate::run(app.handle().clone());
+
             let state = AppState::init(app.handle()).map_err(std::io::Error::other)?;
 
             // On the CSP in tauri.conf.json, which cannot carry a comment of
@@ -85,6 +92,8 @@ pub fn run() {
             commands::allow_media_preview,
             commands::watching_jobs,
             commands::library_root,
+            commands::publik_choice,
+            commands::publik_set_choice,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Hickeyfield");

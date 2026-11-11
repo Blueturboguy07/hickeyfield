@@ -27,6 +27,25 @@ Or build it yourself — see [Development](#development). You will need a key fr
 at least one provider; [fal.ai](https://fal.ai) alone is enough to use
 everything the app can currently reach.
 
+## Sign in with publik
+
+Hickeyfield opens with **Sign in with publik**. The button opens the sign-in
+page in your browser, and the app continues when you are signed in. The app
+then asks once how you pay for AI: **Get a plan** / **Connect your plan**, or
+**Use my own key**. Your provider keys work exactly as before, and the answer
+can be changed in Settings.
+
+The app counts usage: `app_opened` once per launch and `active_session` every
+30 minutes, with your publik install key, so you count once across your
+devices. No prompts, file names or keys are sent. To turn counting off, set
+`DO_NOT_TRACK=1` in the environment, or put `{"usage": false}` in
+`~/Library/Application Support/publik/consent.json`. Details:
+https://publikhq.com/skills/telemetry.md
+
+A release build needs the publik app token for this listing: `PUBLIK_APP_TOKEN`
+at build time, or `src-tauri/publik-app-token.txt` (public by design). A build
+with neither says "This build has no publik app token."
+
 ## Why
 
 The best AI media tools are harnesses: they wrap third-party models in presets

@@ -90,6 +90,21 @@ export async function setKey(
   await invoke("set_key", { provider, secretHalf, value });
 }
 
+/** The answer to the gate's plan screen. `null`: the gate asks again at the next start. */
+export type PublikChoice = "publik" | "own_key";
+
+export async function publikChoice(): Promise<PublikChoice | null> {
+  try {
+    return await invoke<PublikChoice | null>("publik_choice");
+  } catch {
+    return null;
+  }
+}
+
+export async function publikSetChoice(choice: PublikChoice | null): Promise<void> {
+  await invoke("publik_set_choice", { choice });
+}
+
 export async function configuredProviders(): Promise<string[]> {
   try {
     return await invoke<string[]>("configured_providers");
