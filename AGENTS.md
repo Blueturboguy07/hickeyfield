@@ -15,4 +15,5 @@
 - `src-tauri/src/publik_gate.rs`: the gate's screens as native dialogs; `publik_gate::run` is the first call in the setup hook. The main window starts hidden and is shown after the gate.
 - `src-tauri/build.rs`: compiles the app token in from `PUBLIK_APP_TOKEN` or `src-tauri/publik-app-token.txt`.
 - `scripts/publik-self-test.py`: CI proof that the built app runs the gate (`PUBLIK_SELF_TEST=1`).
+- `src-tauri/src/updates.rs`: signed self-update from `https://publikhq.com/api/updates/hickeyfield/latest.json`. Releases and the key: `docs/updates.md`. Proof: `.github/workflows/updater-proof.yml`. Only the updater test hook (`PUBLIK_UPDATE_SELF_TEST`) runs before the gate.
 - Provider keys (fal, Higgsfield, ...) stay in the OS keychain (`src-tauri/src/vault.rs`): "Use my own key" changes nothing there.

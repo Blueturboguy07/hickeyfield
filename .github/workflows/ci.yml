@@ -11,6 +11,8 @@ env:
   # Keys live in the OS keychain, never in CI. Nothing here should ever need a
   # provider credential — if a test starts wanting one, that test is wrong.
   RUST_BACKTRACE: 1
+  # No automatic update check while CI runs the built app (src-tauri/src/updates.rs).
+  PUBLIK_NO_AUTO_UPDATE: '1'
 
 jobs:
   # Fast gates. These fail in under a minute and cover most mistakes, so they
@@ -126,9 +128,14 @@ jobs:
       # so running it there fails with "Couldn't recognize the current folder
       # as a Tauri project" before it compiles a line. scripts/build-macos.sh
       # has always done it this way; CI had not.
+      #
+      # No updater artifacts (createUpdaterArtifacts is on in tauri.conf.json): this build is
+      # unsigned, and the macOS app is signed again on the release Mac, so an update bundle of it
+      # must never ship. The release packs the update bundle from the stapled app instead
+      # (scripts/build-macos.sh, docs/updates.md). CI has no update key, and needs none.
       - name: Bundle
         shell: bash
-        run: ui/node_modules/.bin/tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+        run: ui/node_modules/.bin/tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} --config '{"bundle":{"createUpdaterArtifacts":false}}'
         env:
           # Unsigned in CI on purpose. With APPLE_SIGNING_IDENTITY unset Tauri
           # skips signing entirely, which is what we want here — release signing
@@ -155,6 +162,8 @@ jobs:
 
       # The unsigned app, for the release: it is signed, notarized and stapled
       # on the release Mac. ditto keeps the bundle's symlinks and attributes.
+      # The update bundle (.app.tar.gz + .sig) and latest.json are made there,
+      # from the stapled app, never from this one (docs/updates.md).
       - name: Pack the app (macOS)
         if: runner.os == 'macOS'
         shell: bash

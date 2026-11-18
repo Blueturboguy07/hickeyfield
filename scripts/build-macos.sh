@@ -29,6 +29,12 @@
 #                           variable is APPLE_PASSWORD — not electron-builder's
 #                           APPLE_APP_SPECIFIC_PASSWORD.
 #
+# Updates (docs/updates.md): a notarized build also gets the update bundle, packed and signed
+# with the publik update key from the STAPLED app (scripts/updater-pack-macos.sh), and the
+# feed latest.json with absolute GitHub release asset URLs (scripts/updater-latest-json.mjs),
+# in <target dir>/release/bundle/updater/. Key: TAURI_SIGNING_PRIVATE_KEY(+_PASSWORD), or the
+# login keychain item "publik-update-key". RELEASE_NOTES_FILE=<file> sets the feed's notes.
+#
 # Usage: scripts/build-macos.sh [--target <triple>] [--skip-notarize]
 set -euo pipefail
 
@@ -109,6 +115,10 @@ export APPLE_SIGNING_IDENTITY="$IDENTITY"
 BUILD_ARGS=(build)
 [ -n "$TARGET" ] && BUILD_ARGS+=(--target "$TARGET")
 
+# The update bundle is packed after notarization (below), from the stapled app: the one
+# tauri build would make here is of the app before its ticket is stapled.
+BUILD_ARGS+=(--config '{"bundle":{"createUpdaterArtifacts":false}}')
+
 # The Tauri CLI resolves the project by walking down for tauri.conf.json, so it
 # runs from the repo root — not from src-tauri.
 cd "$REPO_ROOT"
@@ -150,9 +160,32 @@ if [ "$NOTARIZE" = "1" ]; then
     xcrun notarytool submit "$DMG" "${NOTARY_ARGS[@]}" --wait
     xcrun stapler staple "$DMG"
   fi
+
+  # The update bundle is the stapled app itself, so an update keeps the Developer ID identity
+  # (and the TCC permissions bound to it). The feed points at the GitHub release assets by name:
+  # upload the .app.tar.gz, its .sig and latest.json under exactly these names.
+  echo "==> Update bundle and latest.json"
+  UPDATER_OUT="$TARGET_DIR/release/bundle/updater"
+  rm -rf "$UPDATER_OUT"
+  "$REPO_ROOT/scripts/updater-pack-macos.sh" "$APP" "$UPDATER_OUT"
+  VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")"
+  PKG="$(cd "$UPDATER_OUT" && ls ./*.app.tar.gz)"; PKG="${PKG#./}"
+  case "$PKG" in
+    *_aarch64.app.tar.gz) PLATFORMS=(--platform "darwin-aarch64=$UPDATER_OUT/$PKG") ;;
+    *_x64.app.tar.gz) PLATFORMS=(--platform "darwin-x86_64=$UPDATER_OUT/$PKG") ;;
+    *) PLATFORMS=(--platform "darwin-aarch64=$UPDATER_OUT/$PKG" --platform "darwin-x86_64=$UPDATER_OUT/$PKG") ;;
+  esac
+  NOTES=(--notes "$PRODUCT $VERSION")
+  [ -n "${RELEASE_NOTES_FILE:-}" ] && NOTES=(--notes-file "$RELEASE_NOTES_FILE")
+  node "$REPO_ROOT/scripts/updater-latest-json.mjs" --version "$VERSION" \
+    --base-url "https://github.com/Blueturboguy07/hickeyfield/releases/download/v$VERSION/" \
+    "${PLATFORMS[@]}" "${NOTES[@]}" --out "$UPDATER_OUT/latest.json"
+else
+  echo "==> Not notarized: no update bundle (it is made only from a notarized, stapled app)." >&2
 fi
 
 echo
 echo "App: $APP"
 [ -n "$DMG" ] && echo "Dmg: $DMG"
+[ -n "${UPDATER_OUT:-}" ] && echo "Update files (release assets): $UPDATER_OUT/$PKG, $UPDATER_OUT/$PKG.sig, $UPDATER_OUT/latest.json"
 echo "Now run: scripts/verify-macos.sh"

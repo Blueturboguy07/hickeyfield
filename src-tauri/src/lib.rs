@@ -7,6 +7,7 @@ mod publik;
 mod publik_gate;
 mod runner;
 mod store;
+pub mod updates;
 mod validate;
 mod vault;
 
@@ -22,15 +23,36 @@ pub fn run() {
         )
         .init();
 
-    tauri::Builder::default()
-        .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_opener::init())
-        .setup(|app| {
+    // Updater test hook (PUBLIK_UPDATE_SELF_TEST): no window, no gate; see updates.rs.
+    let update_self_test = updates::self_test_mode();
+
+    let builder = updates::plugins(
+        tauri::Builder::default()
+            .plugin(tauri_plugin_shell::init())
+            .plugin(tauri_plugin_dialog::init())
+            .plugin(tauri_plugin_opener::init()),
+    );
+    // The default macOS menu plus "Check for Updates…".
+    #[cfg(target_os = "macos")]
+    let builder = builder
+        .menu(updates::app_menu)
+        .on_menu_event(updates::on_menu_event);
+    builder
+        .setup(move |app| {
+            // The updater's test hook only: no gate, no window, one JSON line, then exit.
+            if let Some(mode) = update_self_test {
+                updates::run_self_test(app.handle(), mode);
+                return Ok(());
+            }
+
             // Sign in with publik, before the main window is shown: the window in
             // tauri.conf.json starts hidden, and the gate thread shows it once the
             // person is signed in. Usage counting starts there too.
             publik_gate::run(app.handle().clone());
+
+            // Update checks do not wait for the gate (it runs on its own thread), so a gate
+            // bug can be fixed by an update. The first check runs 10 s after launch.
+            updates::start(app.handle());
 
             let state = AppState::init(app.handle()).map_err(std::io::Error::other)?;
 

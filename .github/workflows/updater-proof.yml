@@ -1,0 +1,168 @@
+# Proves the signed self-updater end to end on a clean GitHub macOS runner. Never run on a desk Mac.
+# Copied from GSpot's proven proof (Blueturboguy07/gspot); macOS only, because Hickeyfield ships
+# a Mac arm64 dmg only.
+#
+# Builds Hickeyfield N (0.0.1) and N+1 (0.0.2) with the ci.yml bundle command, compiled to read
+# their update feed from http://127.0.0.1:$FEED_PORT/latest.json (PUBLIK_UPDATE_ENDPOINT at build
+# time; plain HTTP on loopback needs dangerousInsecureTransportProtocol, set for these test builds
+# only). Then, on macos-latest: install N, serve the feed in the job, and run N's updater self-test
+# (PUBLIK_UPDATE_SELF_TEST, src-tauri/src/updates.rs) against
+#   - a feed whose signature is from another key        -> refused, N stays on disk
+#   - a feed whose package has one byte changed          -> refused, N stays on disk
+#   - a feed that announces a version the signature does not name -> refused, N stays on disk
+#   - the good feed                                      -> N+1 installed, the app on disk reports N+1
+# It also checks that the updated app keeps the bundle id, the signing certificate and the
+# designated requirement (what TCC permissions are bound to). CI has no Developer ID, so both
+# builds are signed with one throwaway certificate (see tests/updater/proof-macos.sh).
+# Nothing is published: no release, no tag. Results: the job summary and the updater-proof-macos artifact.
+name: updater-proof
+
+on:
+  workflow_dispatch:
+  # A workflow_dispatch workflow can be started only once it is on the default branch; the push
+  # trigger lets it run from a branch before that.
+  push:
+    branches: ['feat/updater', 'updater/**']
+    paths:
+      - 'src-tauri/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'ui/package.json'
+      - 'ui/pnpm-lock.yaml'
+      - 'scripts/updater-*'
+      - 'tests/updater/**'
+      - '.github/workflows/updater-proof.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: updater-proof-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  DO_NOT_TRACK: '1'
+  PUBLIK_NO_AUTO_UPDATE: '1'
+  FEED_PORT: '47390'
+  N: '0.0.1'
+  N1: '0.0.2'
+  TARGET: aarch64-apple-darwin
+
+jobs:
+  build-macos:
+    name: Build macOS ${{ matrix.version }}
+    strategy:
+      matrix:
+        version: ['0.0.1', '0.0.2']
+    runs-on: macos-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+
+      # The toolchain of ci.yml's bundle job.
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ env.TARGET }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: updater-proof-${{ env.TARGET }}
+          cache-on-failure: true
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: ui/pnpm-lock.yaml
+
+      - name: Fetch the FFmpeg sidecar
+        run: ./scripts/fetch-ffmpeg.sh --target "$TARGET"
+
+      - name: Install UI dependencies
+        working-directory: ui
+        run: pnpm install --frozen-lockfile
+
+      # The shipped config (the publik feed, the key, requireSignedVersion, no insecure transport).
+      - name: Unit test of the shipped updater config
+        if: matrix.version == '0.0.1'
+        run: cargo test -p hickeyfield-tauri --lib --target "$TARGET" -- updates::tests
+
+      # The ci.yml bundle command (no updater artifacts: the release packs the update bundle after
+      # Developer ID signing and notarization), plus the test version and the loopback feed.
+      - name: Build Hickeyfield.app ${{ matrix.version }}
+        env:
+          CI: true
+          PUBLIK_UPDATE_ENDPOINT: http://127.0.0.1:${{ env.FEED_PORT }}/latest.json
+          VERSION: ${{ matrix.version }}
+        run: |
+          printf '{"version":"%s","bundle":{"createUpdaterArtifacts":false},"plugins":{"updater":{"dangerousInsecureTransportProtocol":true}}}' "$VERSION" > "$RUNNER_TEMP/proof.conf.json"
+          ui/node_modules/.bin/tauri build --target "$TARGET" --bundles app --config "$RUNNER_TEMP/proof.conf.json"
+          APP="target/$TARGET/release/bundle/macos/Hickeyfield.app"
+          EXE="$APP/Contents/MacOS/$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Contents/Info.plist")"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")" = "$VERSION"
+          lipo -archs "$EXE"
+          ls -l "$APP/Contents/MacOS"
+          grep -q -a -F "127.0.0.1:$FEED_PORT/latest.json" "$EXE"
+          mkdir -p dist
+          ditto -c -k --keepParent "$APP" "dist/Hickeyfield-$VERSION.app.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-macos-${{ matrix.version }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+  proof-macos:
+    name: Proof on macos-latest
+    needs: build-macos
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      # For the Tauri CLI (tauri signer): the release pack script signs with it.
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: ui/pnpm-lock.yaml
+      - name: Install UI dependencies
+        working-directory: ui
+        run: pnpm install --frozen-lockfile
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: build-macos-*
+          path: builds
+          merge-multiple: true
+
+      - name: Unpack N and N+1
+        run: |
+          uname -m; sw_vers
+          mkdir -p apps/N apps/N1
+          ditto -x -k "builds/Hickeyfield-$N.app.zip" apps/N
+          ditto -x -k "builds/Hickeyfield-$N1.app.zip" apps/N1
+
+      - name: Prove the updater
+        timeout-minutes: 20
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then echo "::error::The TAURI_SIGNING_PRIVATE_KEY secret is not set."; exit 1; fi
+          bash tests/updater/proof-macos.sh apps/N/Hickeyfield.app apps/N1/Hickeyfield.app out
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: updater-proof-macos
+          path: out/
+          retention-days: 30

@@ -46,6 +46,13 @@ A release build needs the publik app token for this listing: `PUBLIK_APP_TOKEN`
 at build time, or `src-tauri/publik-app-token.txt` (public by design). A build
 with neither says "This build has no publik app token."
 
+## Updates
+
+Hickeyfield updates itself. It checks at start and once a day, downloads and
+verifies a signed update, and asks before it restarts. The app menu has
+**Check for Updates…**. Set `PUBLIK_NO_AUTO_UPDATE=1` to turn off the
+automatic checks. Releases, the key and roll back: [docs/updates.md](docs/updates.md).
+
 ## Why
 
 The best AI media tools are harnesses: they wrap third-party models in presets

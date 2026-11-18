@@ -24,6 +24,8 @@ tauri = { version = "2", features = ["protocol-asset"] }
 tauri-plugin-shell = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-opener = "2"
+# Signed self-update (src/updates.rs, docs/updates.md). 2.14 has `requireSignedVersion`.
+tauri-plugin-updater = "2.14"
 serde.workspace = true
 serde_json.workspace = true
 anyhow.workspace = true
