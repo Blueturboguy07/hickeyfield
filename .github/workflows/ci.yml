@@ -125,7 +125,7 @@ jobs:
 
       # The updater's schedule (the check 10 s after the start, then once a day) on a test clock.
       - name: Updater unit tests (shell)
-        run: cargo test -p hickeyfield-tauri --lib --target ${{ matrix.target }} updates::
+        run: cargo test -p hickeyfield-tauri --lib --target ${{ matrix.target }} updates
 
       # From the repo root, not from ui/. The Tauri CLI finds its project by
       # walking *down* for tauri.conf.json, and src-tauri is a sibling of ui —
