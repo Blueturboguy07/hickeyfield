@@ -96,7 +96,7 @@ signed with the OLD key, and sign with the new key from the next release on.
 
 ## Test
 
-Run `updater-proof.yml` (workflow_dispatch, or a push to `feat/updater` or `updater/**`). It
+Run `updater-proof.yml` (workflow_dispatch, from the default branch). It
 builds 0.0.1 and 0.0.2 on `macos-latest`, signs both with one throwaway certificate (CI has no
 Developer ID), installs 0.0.1, and checks that 0.0.1 refuses three bad feeds and then updates
 to 0.0.2 with the same bundle id, certificate and designated requirement. Then it starts 0.0.1
