@@ -293,7 +293,7 @@ if [ "$MODE" = no-update ]; then
   check "the app reports \"$FROM is the latest version\"" "" wait_for 120 log_has "$LOG" "updates: $FROM is the latest version"
   sleep 20
   shot no-update
-  check "no update was installed or offered" "" sh -c '! grep -q "is ready" "$1"' _ "$LOG"
+  check "no update was installed or offered" "" sh -c '! grep -q "updates: Hickeyfield .* is ready" "$1"' _ "$LOG"
   check "no update question on screen (no \"Hickeyfield update\" window)" "" no_alert "Hickeyfield update"
   check "the app keeps running (same process)" "pid $PID" kill -0 "$PID"
   check "the running app told its version: $FROM (install request)" "" told_version "$FROM"
@@ -405,7 +405,7 @@ for f in "$OUT"/app-*.log; do
 done > "$OUT/updater-lines.txt"
 cat "$OUT/updater-lines.txt"
 check "the app's request went to publikhq.com and the feed named the GitHub asset" "" \
-  sh -c 'grep -qF "checking for updates $1" "$2" && grep -q "https://github.com/$3/releases/download/" "$2"' _ "$FEED" "$OUT/updater-lines.txt" "$REPO"
+  sh -c 'grep -qF "checking for updates $1" "$2" && grep -q "update response" "$2" && grep -q "https://github.com/$3/releases/download/" "$4"' _ "$FEED" "$OUT/updater-lines.txt" "$REPO" "$OUT/feed-at-start.json"
 check "downloads by this job before the check: only the $FROM_TAG dmg and its checksums" "$(ls "$WORK/dl" | tr '\n' ' ')" \
   test "$(ls "$WORK/dl" | tr '\n' ' ')" = "$(basename "$DMG") SHA256SUMS.txt "
 
