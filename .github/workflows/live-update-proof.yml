@@ -15,8 +15,6 @@
 name: live-update-proof
 
 on:
-  push:
-    branches: [live-proof] # TEMPORARY, removed before the merge
   workflow_dispatch:
     inputs:
       from_tag:
@@ -30,8 +28,8 @@ permissions:
   contents: read
 
 env:
-  FROM_TAG: ${{ inputs.from_tag || 'v0.1.2' }}
-  EXPECT_VERSION: ${{ inputs.expect_version || '0.1.2' }}
+  FROM_TAG: ${{ inputs.from_tag }}
+  EXPECT_VERSION: ${{ inputs.expect_version }}
 
 jobs:
   macos:

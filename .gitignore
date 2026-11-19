@@ -38,3 +38,6 @@ node_modules
 .DS_Store
 Thumbs.db
 .gstack/
+
+# scripts/publik-release.sh work folder
+.release/

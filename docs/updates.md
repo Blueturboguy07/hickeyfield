@@ -39,6 +39,24 @@ installed copies can never update again.
 
 ## Cut a release
 
+One command does the release, on the release Mac:
+
+```sh
+scripts/publik-release.sh <version>
+```
+
+Before it: put `<version>` in `src-tauri/tauri.conf.json`, the workspace `Cargo.toml`,
+`Cargo.lock` and `ui/package.json`, add a `## <version>` section to `CHANGELOG.md`, commit and
+push to main. The script waits for CI, signs and notarizes the CI app with the keychain's
+Developer ID, makes the dmg, the update bundle and the signed feed, uploads a draft, downloads
+it back, checks every file, and publishes only when every check passed. Run the same command
+again after a failure. The head of the script lists each step.
+
+After publik's next intake (10:00 UTC), prove the update on a clean runner:
+`gh workflow run live-update-proof.yml -f from_tag=v<old> -f expect_version=<version>`.
+
+### The same steps by hand
+
 1. Set the new version in `src-tauri/tauri.conf.json`, the workspace `Cargo.toml` and
    `ui/package.json`. Push.
 2. On the release Mac, build, sign, notarize and pack. The update key comes from the keychain:
