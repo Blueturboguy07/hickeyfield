@@ -1,0 +1,55 @@
+# Live update proof: installs a PUBLISHED Hickeyfield release on a clean GitHub macOS runner the
+# way a user does, starts it the normal way, and lets the app's own updater ask the LIVE publik
+# feed (https://publikhq.com/api/updates/hickeyfield/latest.json). No test hook, no feed
+# override, no build. Hickeyfield ships macOS arm64 only, so this is one job on macos-latest.
+#   - expect_version = the version of from_tag: the app must find no update and stay as it is
+#     (proves the download, Gatekeeper, the TCC rows, the launch, the feed request, the menu item).
+#   - expect_version higher: the feed must serve it; the app must install it by itself, ask, and
+#     run it after "Restart"; "Later" keeps the old process running.
+# It also writes real TCC grants (camera, microphone, screen capture, accessibility) before the
+# update and checks after it that every stored csreq is still satisfied by the installed app, and
+# clicks "Check for Updates…" in the app menu and reads the answer.
+# Details: tests/live-proof/proof-macos.sh. Never run it on a desk computer.
+# Logs, screenshots and the results table: the live-proof-macos artifact. Wrong signatures are
+# proven by updater-proof.yml.
+name: live-update-proof
+
+on:
+  push:
+    branches: [live-proof] # TEMPORARY, removed before the merge
+  workflow_dispatch:
+    inputs:
+      from_tag:
+        description: Published release to install first (N), for example v0.1.2
+        required: true
+      expect_version:
+        description: Version the app must run after the live check (N+1, or N for "no update")
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  FROM_TAG: ${{ inputs.from_tag || 'v0.1.2' }}
+  EXPECT_VERSION: ${{ inputs.expect_version || '0.1.2' }}
+
+jobs:
+  macos:
+    name: macOS arm64 (macos-latest)
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: tests/live-proof
+
+      - name: Live update proof
+        timeout-minutes: 40
+        run: bash tests/live-proof/proof-macos.sh "$FROM_TAG" "$EXPECT_VERSION" out
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: live-proof-macos
+          path: out/
+          retention-days: 30
