@@ -308,7 +308,9 @@ if [ "$RSTATE" != published ]; then
   if [ "$RSTATE" = draft ] && have_all_assets && [ ! -f "$OUT/$DMG" ]; then
     note "the draft has every file and the work folder has none: verifying the draft"
   else
-    if [ -f "$OUT/$DMG" ] && [ -f "$OUT/$TGZ" ] && [ -f "$OUT/$TGZ.sig" ]; then
+    # A dmg without a stapled ticket is from a run that stopped in the signing step (the dmg is
+    # written before it is signed and notarized): make the files again.
+    if [ -f "$OUT/$DMG" ] && [ -f "$OUT/$TGZ" ] && [ -f "$OUT/$TGZ.sig" ] && xcrun stapler validate -q "$OUT/$DMG" >/dev/null 2>&1; then
       note "signed, notarized and packed already (in $OUT)"
     else
       say "Download the CI build"
