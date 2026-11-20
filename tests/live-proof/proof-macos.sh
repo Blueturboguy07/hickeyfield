@@ -104,6 +104,21 @@ alert_press() { limit 60 osascript "$UI_SCRIPT" press "$1" "$2" 2>> "$OUT/osascr
 has_alert() { local t; t="$(alert_find "$1")" && [ -n "$t" ]; }
 # True only when System Events could look and found no such window.
 no_alert() { local t; t="$(alert_find "$1")" && [ -z "$t" ]; }
+# The menu with real input: a click on the app's name in the menu bar, the item's first letters, Return.
+# For the state after "Later": the app's file on disk is the new version while the old one runs, and
+# macOS then refuses the accessibility API for that process ("not allowed assistive access").
+real_menu_click() {
+  [ -x "$WORK/click" ] || swiftc -O -o "$WORK/click" "$HERE/click.swift" 2>> "$OUT/osascript.log" || return 1
+  open "$APP"
+  sleep 3
+  "$WORK/click" 70 12 left
+  sleep 2
+  shot real-menu-open
+  "$WORK/click" type Check
+  sleep 1
+  "$WORK/click" key 36
+  echo "real mouse click on the app's name in the menu bar, then the keys C-h-e-c-k and Return"
+}
 # Three tries: System Events sometimes answers "not allowed assistive access" for a moment after an alert closes.
 click_check_for_updates() {
   local r i
@@ -361,11 +376,8 @@ else
     check "[Later] the running process is still the old code (inode)" "$(running_inode "$LATER_PID") / $(disk_inode)" runs_old_file "$LATER_PID"
     # The menu offers the downloaded update again at once.
     clicked="$(click_check_for_updates)"
-    # GitHub's macOS runner sometimes takes System Events access from osascript in the middle of a job.
-    # Then the menu cannot be driven: that is a limit of the runner, not an answer of the app.
-    if [ -z "$clicked" ] && tail -n 1 "$OUT/osascript.log" 2>/dev/null | grep -q "not allowed assistive access"; then
-      note "[Later] \"Check for Updates…\" not driven" "the runner refused System Events access to osascript; the Restart variant drove the same menu"
-    else
+    [ -n "$clicked" ] || clicked="$(real_menu_click)"
+    if true; then
       check "[Later] \"Check for Updates…\" clicked in the app menu" "$clicked" test -n "$clicked"
       check "[Later] the menu offers $EXPECT again (the same question)" "" wait_for 60 has_alert "Hickeyfield $EXPECT is installed"
       shot later-menu-question
