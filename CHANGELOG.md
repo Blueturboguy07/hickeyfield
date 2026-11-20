@@ -4,6 +4,13 @@ Each release has a `## <version>` section. `scripts/publik-release.sh` puts the 
 release notes and in the update feed (`latest.json`), so the app shows it with the update.
 Older releases: https://github.com/Blueturboguy07/hickeyfield/releases
 
+## 0.1.4
+
+After you sign in with publik, the app opens at once. The "Choose how to pay for AI" screen is gone.
+
+- Your provider keys work as before. Hickeyfield makes images and videos with them.
+- Settings still has "Use my own keys".
+
 ## 0.1.3
 
 No change in the app. Hickeyfield 0.1.3 is the same app as 0.1.2.

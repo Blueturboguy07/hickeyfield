@@ -90,7 +90,7 @@ export async function setKey(
   await invoke("set_key", { provider, secretHalf, value });
 }
 
-/** The answer to the gate's plan screen. `null`: the gate asks again at the next start. */
+/** How the app pays for AI. `null`: the gate stores "publik" at the next start (no pay screen). */
 export type PublikChoice = "publik" | "own_key";
 
 export async function publikChoice(): Promise<PublikChoice | null> {

@@ -16,14 +16,14 @@ use tauri::State;
 
 // ── Sign in with publik ───────────────────────────────────────────────────
 
-/// The stored answer to the gate's plan screen: "publik", "own_key", or `None`
-/// when the gate asks again at the next start. Never the key.
+/// The stored AI choice: "publik", "own_key", or `None` until the gate stores
+/// "publik" at the next start (no pay screen). Never the key.
 #[tauri::command]
 pub fn publik_choice() -> Option<String> {
     crate::publik::read_credential().and_then(|c| c["choice"].as_str().map(String::from))
 }
 
-/// Change the answer from Settings. `None` asks again at the next start.
+/// Change the choice from Settings. `None`: the gate stores "publik" at the next start.
 #[tauri::command]
 pub fn publik_set_choice(choice: Option<String>) -> Result<(), String> {
     match choice.as_deref() {

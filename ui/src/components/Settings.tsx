@@ -135,9 +135,9 @@ export function Settings({
             <h3 className="setup-heading">Sign in with publik</h3>
             <p className="setup-sub">
               This app opens with Sign in with publik and counts usage (app
-              opened, active session). Your answer to the &quot;Choose how to
-              pay for AI&quot; screen is stored here. Generation uses the
-              provider keys above either way.
+              opened, active session). After sign-in it uses your publik plan
+              and shows no pay screen. You can change that here. Generation
+              uses the provider keys above either way.
             </p>
           </div>
           <div className="local-status">
@@ -146,7 +146,7 @@ export function Settings({
                 ? "Your publik plan"
                 : choice === "own_key"
                   ? "Your own keys"
-                  : "Not answered yet: the app asks at the next start"}
+                  : "Not set yet: the app uses your publik plan"}
             </span>
             <button
               type="button"
@@ -163,14 +163,6 @@ export function Settings({
               onClick={() => void pickChoice("own_key")}
             >
               Use my own keys
-            </button>
-            <button
-              type="button"
-              className="btn btn-sm btn-outline"
-              disabled={choice === null}
-              onClick={() => void pickChoice(null)}
-            >
-              Ask again at next start
             </button>
           </div>
         </section>

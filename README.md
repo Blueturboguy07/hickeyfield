@@ -30,10 +30,9 @@ everything the app can currently reach.
 ## Sign in with publik
 
 Hickeyfield opens with **Sign in with publik**. The button opens the sign-in
-page in your browser, and the app continues when you are signed in. The app
-then asks once how you pay for AI: **Get a plan** / **Connect your plan**, or
-**Use my own key**. Your provider keys work exactly as before, and the answer
-can be changed in Settings.
+page in your browser, and the app opens at once when you are signed in. There
+is no pay screen. Your provider keys work exactly as before, and Settings has
+**Use my own keys**.
 
 The app counts usage: `app_opened` once per launch and `active_session` every
 30 minutes, with your publik install key, so you count once across your

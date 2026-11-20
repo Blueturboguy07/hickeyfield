@@ -127,6 +127,11 @@ jobs:
       - name: Updater unit tests (shell)
         run: cargo test -p hickeyfield-tauri --lib --target ${{ matrix.target }} updates
 
+      # The sign-in gate against a stand-in for publik on 127.0.0.1 (src/publik.rs): sign in,
+      # then straight in; no pay screen for a person with no plan; a stored choice stays.
+      - name: publik gate unit test (shell)
+        run: cargo test -p hickeyfield-tauri --lib --target ${{ matrix.target }} publik::tests
+
       # From the repo root, not from ui/. The Tauri CLI finds its project by
       # walking *down* for tauri.conf.json, and src-tauri is a sibling of ui —
       # so running it there fails with "Couldn't recognize the current folder

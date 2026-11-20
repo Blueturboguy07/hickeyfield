@@ -2,7 +2,7 @@
 // At app start, before any window of your own: `let gate = publik::ensure_signed_in(&mut ui);`. It
 //   1. loads or provisions this computer's publik key (POST /api/v1/installs);
 //   2. shows Sign in with publik until GET /api/v1/wallet says "claimed" (no other way past it);
-//   3. when USES_AI: asks once how the app pays for AI and stores the answer (set_choice() changes it);
+//   3. when USES_AI: uses the publik account for AI, with no pay screen (set_choice() changes it);
 //   4. starts usage counting: app_opened now, active_session every 30 minutes (POST /api/v1/telemetry).
 #![allow(dead_code)]
 use serde_json::{json, Value};
@@ -15,7 +15,7 @@ use std::time::Duration;
 
 pub const APP_SLUG: &str = "hickeyfield";
 pub const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
-/// false: the app calls no model. It still signs in and counts users; it skips the plan screen.
+/// false: the app calls no model. It still signs in and counts users; it stores no choice.
 pub const USES_AI: bool = true;
 /// Ask for a tier, never a vendor model name.
 pub const MODELS: [&str; 3] = ["publik-fast", "publik-balanced", "publik-smart"];
@@ -60,6 +60,13 @@ pub trait GateUi {
 
 /// ~/Library/Application Support/publik, %LOCALAPPDATA%\publik, ~/.config/publik: shared by every publik app.
 fn publik_dir() -> PathBuf {
+    // The gate test keeps its files in a temporary folder, never in the real home folder.
+    #[cfg(test)]
+    {
+        if let Some(dir) = tests::TEST_DIR.get() {
+            return dir.clone();
+        }
+    }
     let home = std::env::var_os("HOME")
         .or_else(|| std::env::var_os("USERPROFILE"))
         .map(PathBuf::from)
@@ -97,7 +104,7 @@ fn write_credential(v: &Value) -> Result<(), String> {
     }
     Ok(())
 }
-/// The person's answer to the plan screen: Some("publik"), Some("own_key"), or None to ask again. Settings call it.
+/// The AI choice: Some("publik"), Some("own_key"), or None (the gate stores "publik" at the next start). Settings call it.
 pub fn set_choice(choice: Option<&str>) {
     if let Some(mut c) = read_credential() {
         c["choice"] = json!(choice);
@@ -341,12 +348,7 @@ pub fn ensure_signed_in(ui: &mut dyn GateUi) -> (String, Value, Option<String>) 
         println!("{}", self_test());
         std::process::exit(0);
     }
-    let (mut sign_note, mut sign_poll, mut plan_note, mut plan_poll): (
-        Option<&'static str>,
-        bool,
-        Option<&'static str>,
-        bool,
-    ) = (None, true, None, false);
+    let (mut sign_note, mut sign_poll): (Option<&'static str>, bool) = (None, true);
     loop {
         let env_key = std::env::var("PUBLIK_API_KEY")
             .ok()
@@ -420,34 +422,9 @@ pub fn ensure_signed_in(ui: &mut dyn GateUi) -> (String, Value, Option<String>) 
             None
         };
         if USES_AI && choice.is_none() {
-            if has_plan(&w) {
-                (plan_note, plan_poll) = (None, false);
-            } // the plan is there: Connect your plan
-            let a = ask(
-                ui,
-                &gate_screen("choose", Some(&w), plan_note, None),
-                &key,
-                if plan_poll { Some(has_plan) } else { None },
-            );
-            (plan_note, plan_poll) = (None, false);
-            if a == "get_plan" {
-                ui.open_url(
-                    w["top_up_url"]
-                        .as_str()
-                        .unwrap_or(&format!("{}/wallet", origin())),
-                );
-                (plan_note, plan_poll) =
-                    (Some("Waiting for your plan. Finish in your browser."), true);
-            }
-            if a == "timeout" {
-                plan_note = Some("No plan after 10 minutes. Click Get a plan to try again.");
-            }
-            if a != "connect" && a != "own_key" {
-                continue;
-            } // "done": the plan is there; the next screen is Connect your plan
-            choice = Some(if a == "connect" { "publik" } else { "own_key" }.to_string());
+            choice = Some("publik".to_string());
             set_choice(choice.as_deref());
-        }
+        } // no pay screen at start: publik is the choice; Settings changes it
         start_telemetry();
         return (key, w, choice);
     }
@@ -722,5 +699,122 @@ pub fn search(
         Ok((402, v)) => Err(top_up_url_from_402(&v)),
         Ok((c, _)) => Err((format!("publik API answered {c}."), None)),
         Err(e) => Err((e, None)),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Read;
+    use std::net::TcpListener;
+    use std::sync::OnceLock;
+
+    /// publik_dir() in a test build, once the gate test has set it.
+    pub(super) static TEST_DIR: OnceLock<PathBuf> = OnceLock::new();
+
+    /// A stand-in for publik on 127.0.0.1: every request gets the wallet as it is at that moment.
+    fn fake_publik(wallet: Arc<Mutex<Value>>) -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let origin = format!("http://{}", listener.local_addr().unwrap());
+        std::thread::spawn(move || {
+            for stream in listener.incoming() {
+                let Ok(mut stream) = stream else { continue };
+                let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
+                let (mut head, mut byte) = (Vec::<u8>::new(), [0u8; 1]);
+                while !head.ends_with(b"\r\n\r\n") && matches!(stream.read(&mut byte), Ok(1)) {
+                    head.push(byte[0]);
+                }
+                let body = wallet.lock().unwrap().to_string();
+                let _ = write!(
+                    stream,
+                    "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}",
+                    body.len()
+                );
+            }
+        });
+        origin
+    }
+
+    /// The person at the screen: presses Sign in with publik and signs in in the browser. Any
+    /// other screen fails the test.
+    struct Person {
+        wallet: Arc<Mutex<Value>>,
+        screens: Vec<&'static str>,
+        opened: Vec<String>,
+    }
+    impl GateUi for Person {
+        fn show(&mut self, screen: &Screen, _done: Arc<AtomicBool>) -> Option<&'static str> {
+            self.screens.push(screen.id);
+            assert_eq!(
+                screen.id, "sign_in",
+                "the gate showed \"{}\": {}",
+                screen.title, screen.body
+            );
+            assert!(self.screens.len() < 3, "the gate asked to sign in again");
+            Some("sign_in")
+        }
+        fn open_url(&mut self, url: &str) {
+            self.opened.push(url.to_string());
+            self.wallet.lock().unwrap()["claim_state"] = json!("claimed");
+        }
+    }
+
+    #[test]
+    fn sign_in_then_straight_in_with_no_pay_screen() {
+        let dir = std::env::temp_dir().join(format!("hickeyfield-gate-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        TEST_DIR.set(dir.clone()).unwrap();
+        // A test counts no usage.
+        TELEMETRY_STARTED.store(true, Ordering::SeqCst);
+        // No plan and no balance.
+        let wallet = Arc::new(Mutex::new(json!({
+            "claim_state": "unclaimed",
+            "claim_url": "https://publikhq.com/claim/TEST",
+            "plan": { "kind": "none", "label": null },
+            "balance_micros": 0,
+            "top_up_url": "https://publikhq.com/wallet",
+        })));
+        std::env::set_var("PUBLIK_ORIGIN", fake_publik(wallet.clone()));
+        std::env::remove_var("PUBLIK_API_KEY");
+        std::env::remove_var("PUBLIK_SELF_TEST");
+        let seed = |choice: Value| {
+            let c = json!({ "key": "pk_test", "choice": choice });
+            write_credential(&c).unwrap();
+        };
+        let stored = || read_credential().unwrap()["choice"].clone();
+        let person = || Person {
+            wallet: wallet.clone(),
+            screens: vec![],
+            opened: vec![],
+        };
+
+        // Not signed in, no stored choice: Sign in with publik, then straight in.
+        seed(Value::Null);
+        let mut ui = person();
+        let (key, w, choice) = ensure_signed_in(&mut ui);
+        assert_eq!(ui.screens, ["sign_in"]);
+        assert_eq!(ui.opened, ["https://publikhq.com/claim/TEST"]);
+        assert_eq!(
+            (key.as_str(), choice.as_deref()),
+            ("pk_test", Some("publik"))
+        );
+        assert!(claimed(&w) && !has_plan(&w));
+        assert_eq!(stored(), "publik");
+
+        // Signed in with no plan and no stored choice: no screen at all.
+        seed(Value::Null);
+        let mut ui = person();
+        assert_eq!(ensure_signed_in(&mut ui).2.as_deref(), Some("publik"));
+        assert!(ui.screens.is_empty(), "screens: {:?}", ui.screens);
+        assert_eq!(stored(), "publik");
+
+        // A stored "own_key" is kept as it is.
+        seed(json!("own_key"));
+        let mut ui = person();
+        assert_eq!(ensure_signed_in(&mut ui).2.as_deref(), Some("own_key"));
+        assert!(ui.screens.is_empty(), "screens: {:?}", ui.screens);
+        assert_eq!(stored(), "own_key");
+
+        let _ = std::fs::remove_dir_all(dir);
     }
 }
