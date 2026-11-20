@@ -104,7 +104,15 @@ alert_press() { limit 60 osascript "$UI_SCRIPT" press "$1" "$2" 2>> "$OUT/osascr
 has_alert() { local t; t="$(alert_find "$1")" && [ -n "$t" ]; }
 # True only when System Events could look and found no such window.
 no_alert() { local t; t="$(alert_find "$1")" && [ -z "$t" ]; }
-click_check_for_updates() { limit 60 osascript "$UI_SCRIPT" menu "$BUNDLE_ID" "Check for Updates" 2>> "$OUT/osascript.log"; }
+# Three tries: System Events sometimes answers "not allowed assistive access" for a moment after an alert closes.
+click_check_for_updates() {
+  local r i
+  for i in 1 2 3; do
+    r="$(limit 60 osascript "$UI_SCRIPT" menu "$BUNDLE_ID" "Check for Updates" 2>> "$OUT/osascript.log")"
+    if [ -n "$r" ]; then printf '%s\n' "$r"; return 0; fi
+    sleep 5
+  done
+}
 log_has() { grep -qF "$2" "$1" 2>/dev/null; }
 count_in() { grep -cF "$2" "$1" 2>/dev/null || true; }
 
