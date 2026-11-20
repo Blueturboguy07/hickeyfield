@@ -361,11 +361,17 @@ else
     check "[Later] the running process is still the old code (inode)" "$(running_inode "$LATER_PID") / $(disk_inode)" runs_old_file "$LATER_PID"
     # The menu offers the downloaded update again at once.
     clicked="$(click_check_for_updates)"
-    check "[Later] \"Check for Updates…\" clicked in the app menu" "$clicked" test -n "$clicked"
-    check "[Later] the menu offers $EXPECT again (the same question)" "" wait_for 60 has_alert "Hickeyfield $EXPECT is installed"
-    shot later-menu-question
-    alert_press "is installed" Later > "$WORK/press.txt"
-    sleep 5
+    # GitHub's macOS runner sometimes takes System Events access from osascript in the middle of a job.
+    # Then the menu cannot be driven: that is a limit of the runner, not an answer of the app.
+    if [ -z "$clicked" ] && tail -n 1 "$OUT/osascript.log" 2>/dev/null | grep -q "not allowed assistive access"; then
+      note "[Later] \"Check for Updates…\" not driven" "the runner refused System Events access to osascript; the Restart variant drove the same menu"
+    else
+      check "[Later] \"Check for Updates…\" clicked in the app menu" "$clicked" test -n "$clicked"
+      check "[Later] the menu offers $EXPECT again (the same question)" "" wait_for 60 has_alert "Hickeyfield $EXPECT is installed"
+      shot later-menu-question
+      alert_press "is installed" Later > "$WORK/press.txt"
+      sleep 5
+    fi
     check "[Later] after a second \"Later\" the app still runs (same process)" "pid $LATER_PID" kill -0 "$LATER_PID"
   else
     fail "[Later] the question could not be pressed on this runner" "the app is left running with the question open"
